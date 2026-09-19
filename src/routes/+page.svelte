@@ -31,7 +31,9 @@
 	let headerEl: HTMLElement;
 	let heroEl: HTMLElement;
 	let glowEl: HTMLDivElement;
-	let brandEl: HTMLDivElement;
+	let logoWrapEl: HTMLDivElement;
+	let logoEl: HTMLImageElement;
+	let curtainEl: HTMLDivElement;
 	let scrollHintEl: HTMLDivElement;
 	let scrollLineEl: HTMLSpanElement;
 	let splitEl: HTMLElement;
@@ -55,16 +57,19 @@
 			ctx = gsap.context(() => {
 				const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+				gsap.set(curtainEl, { yPercent: 100 });
+
 				if (reduceMotion) {
-					gsap.set([brandEl, scrollHintEl], { opacity: 1, y: 0, scale: 1 });
+					gsap.set([logoWrapEl, scrollHintEl], { opacity: 1, y: 0, scale: 1 });
 				} else {
-					gsap.from(brandEl, {
+					gsap.from(logoWrapEl, {
 						opacity: 0,
 						scale: 0.92,
 						y: 18,
 						duration: 1.2,
 						delay: 0.15,
-						ease: 'power2.out'
+						ease: 'power2.out',
+						clearProps: 'opacity,transform'
 					});
 					gsap.from(scrollHintEl, {
 						opacity: 0,
@@ -77,8 +82,13 @@
 
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const setupScene = (isMobile: boolean) => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let glowPulse: any;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let scrollLinePulse: any;
+
 					if (!reduceMotion) {
-						gsap.to(glowEl, {
+						glowPulse = gsap.to(glowEl, {
 							opacity: isMobile ? 0.65 : 0.85,
 							scale: isMobile ? 1.04 : 1.1,
 							duration: isMobile ? 4 : 3.2,
@@ -87,49 +97,86 @@
 							ease: 'sine.inOut'
 						});
 
-						gsap.fromTo(
+						scrollLinePulse = gsap.fromTo(
 							scrollLineEl,
 							{ yPercent: -100 },
 							{ yPercent: 100, duration: 1.6, repeat: -1, ease: 'power1.inOut' }
 						);
 					}
 
-					const dockTl = gsap.timeline({
+					if (reduceMotion) {
+						// No pin / fly-through for reduced-motion users: just reveal the
+						// sticky header once the hero has scrolled past.
+						ScrollTrigger.create({
+							trigger: heroEl,
+							start: 'bottom top',
+							onEnter: () => (headerVisible = true),
+							onLeaveBack: () => (headerVisible = false)
+						});
+						if (splitHeadingEl) {
+							gsap.set(splitHeadingEl, { opacity: 1, y: 0 });
+						}
+						return;
+					}
+
+					const flyTl = gsap.timeline({
 						scrollTrigger: {
 							trigger: heroEl,
 							start: 'top top',
-							end: 'bottom top',
-							scrub: isMobile ? 0.3 : 0.6
+							end: '+=75%',
+							pin: true,
+							scrub: 1,
+							anticipatePin: 1
+						},
+						onStart: () => {
+							glowPulse?.kill();
+							scrollLinePulse?.kill();
 						}
 					});
 
-					dockTl
-						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.15, ease: 'none' }, 0)
+					flyTl
+						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.06, ease: 'none' }, 0)
 						.to(
-							brandEl,
+							logoEl,
 							{
-								scale: isMobile ? 0.7 : 0.55,
-								yPercent: isMobile ? -35 : -55,
+								scale: isMobile ? 2.2 : 2.6,
+								yPercent: -120,
 								opacity: 0,
 								ease: 'power1.in',
+								duration: 0.55
+							},
+							0.05
+						)
+						.to(
+							glowEl,
+							{
+								scale: isMobile ? 2.4 : 3.2,
+								opacity: 0,
+								ease: 'none',
 								duration: 0.65
 							},
 							0
 						)
-						.to(glowEl, { opacity: 0, duration: 0.5, ease: 'none' }, 0)
-						.fromTo(
+						.to(
+							curtainEl,
+							{
+								yPercent: 0,
+								ease: 'power2.inOut',
+								duration: 0.65
+							},
+							0.3
+						)
+						.to(
 							headerEl,
-							{ opacity: 0, yPercent: -100 },
-							{ opacity: 1, yPercent: 0, duration: 0.4, ease: 'power1.out' },
-							0.45
+							{
+								opacity: 1,
+								duration: 0.2,
+								ease: 'power1.out',
+								onStart: () => (headerVisible = true),
+								onReverseComplete: () => (headerVisible = false)
+							},
+							0.8
 						);
-
-					ScrollTrigger.create({
-						trigger: heroEl,
-						start: 'bottom top-=1',
-						onEnter: () => (headerVisible = true),
-						onLeaveBack: () => (headerVisible = false)
-					});
 
 					if (splitHeadingEl) {
 						gsap.from(splitHeadingEl, {
@@ -195,11 +242,13 @@
 			class="pointer-events-none absolute left-1/2 top-1/2 h-[60vmax] w-[60vmax] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/40 opacity-50 blur-3xl"
 		></div>
 
-		<div bind:this={brandEl} class="relative z-10 flex flex-col items-center gap-5 px-6 text-center">
-			<img src="/logo.jpg" alt="" class="h-28 w-auto drop-shadow-sm sm:h-36" />
-			<h1 class="font-serif text-2xl tracking-wide text-ink sm:text-3xl md:text-4xl">
-				Lena's Garn &amp; Blütentraum
-			</h1>
+		<div bind:this={logoWrapEl}>
+			<img
+				bind:this={logoEl}
+				src="/logo.jpg"
+				alt="Lena's Garn &amp; Blütentraum"
+				class="relative z-10 w-[85vw] max-h-[75vh] object-contain mix-blend-multiply md:h-[80vh] md:w-auto md:max-w-[90vw]"
+			/>
 		</div>
 
 		<div
@@ -212,6 +261,12 @@
 				></span>
 			</span>
 		</div>
+
+		<div
+			bind:this={curtainEl}
+			aria-hidden="true"
+			class="pointer-events-none absolute inset-0 z-20 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
+		></div>
 	</section>
 
 	<section bind:this={splitEl} id="welten" class="relative bg-background">
