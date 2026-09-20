@@ -346,25 +346,35 @@
 						pathEl: SVGPathElement | null,
 						triggerEl: Element | null,
 						start = 'top bottom',
-						end = 'top 15%'
+						end = 'top 15%',
+						dotEl?: SVGCircleElement | null
 					) => {
 						if (!pathEl || !triggerEl) return;
 						const len = pathEl.getTotalLength();
 						gsap.set(pathEl, { strokeDasharray: len, strokeDashoffset: len });
-						gsap.to(pathEl, {
-							strokeDashoffset: 0,
-							ease: 'none',
+						if (dotEl) gsap.set(dotEl, { opacity: 0, scale: 0, transformOrigin: '50% 50%' });
+
+						const tl = gsap.timeline({
 							scrollTrigger: { trigger: triggerEl, start, end, scrub: 1.5 }
 						});
+						tl.to(pathEl, { strokeDashoffset: 0, ease: 'none', duration: 1 }, 0);
+						if (dotEl) {
+							// Der Glanzpunkt leuchtet erst auf, sobald die Linie fast fertig gezeichnet ist.
+							tl.to(dotEl, { opacity: 1, scale: 1, ease: 'power1.out', duration: 0.25 }, 0.8);
+						}
 					};
 
-					// Faden zeichnet im jeweiligen Kartenbereich das Kleid bzw. die Blüte.
+					// Faden zeichnet im jeweiligen Kartenbereich das Kleid bzw. die Blüte,
+					// mit leuchtendem Glanzpunkt an der fertig gezeichneten Spitze.
 					const prefix = isMobile ? 'mobile' : 'desktop';
 					worlds.forEach((world, i) => {
 						const pathEl = document.getElementById(
 							`${prefix}-thread-${world.kicker}`
 						) as SVGPathElement | null;
-						wireDraw(pathEl, revealTargets[i]);
+						const dotEl = document.getElementById(
+							`${prefix}-dot-${world.kicker}`
+						) as SVGCircleElement | null;
+						wireDraw(pathEl, revealTargets[i], undefined, undefined, dotEl);
 					});
 
 					// Verbindende Wellenlinien zwischen den Stationen, damit der Faden
@@ -382,10 +392,14 @@
 						'bottom 20%'
 					);
 
-					// Faden mündet in eine kleine Schleife über dem Anfrage-Bereich.
+					// Faden mündet in eine kleine Schleife über dem Anfrage-Bereich,
+					// die sich am Ende zu einem Glanzpunkt schließt.
 					wireDraw(
 						document.getElementById('cta-loop-path') as SVGPathElement | null,
-						document.getElementById('cta-loop-path')
+						document.getElementById('cta-loop-path'),
+						undefined,
+						undefined,
+						document.getElementById('cta-loop-dot') as SVGCircleElement | null
 					);
 				};
 
@@ -433,17 +447,17 @@
 		></div>
 
 		<svg
-			viewBox="0 0 100 100"
-			preserveAspectRatio="none"
+			viewBox="0 0 40 100"
 			aria-hidden="true"
-			class="pointer-events-none absolute inset-0 z-[12] h-full w-full text-accent/70"
+			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));"
+			class="pointer-events-none absolute left-1/2 top-[30%] z-20 h-[24vh] w-16 -translate-x-1/2 text-thread"
 		>
 			<path
 				bind:this={heroThreadPathEl}
-				d="M50,34 C45,42 55,50 49,58 C44,64 50,68 50,71"
+				d="M20,0 C10,20 30,40 20,60 C12,74 26,88 20,100"
 				fill="none"
 				stroke="currentColor"
-				stroke-width="1.5"
+				stroke-width="4"
 				vector-effect="non-scaling-stroke"
 				stroke-linecap="round"
 			/>
@@ -497,14 +511,15 @@
 					viewBox="0 0 100 120"
 					preserveAspectRatio="none"
 					aria-hidden="true"
-					class="pointer-events-none absolute -inset-5 z-20 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)] text-accent"
+					style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));"
+					class="pointer-events-none absolute -inset-5 z-30 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)] text-thread"
 				>
 					<path
 						bind:this={aboutFramePathEl}
 						d="M20,8 C2,20 -2,55 5,90 C10,108 25,118 50,119 C75,118 92,105 96,82 C99,65 94,40 82,22"
 						fill="none"
 						stroke="currentColor"
-						stroke-width="1.5"
+						stroke-width="4"
 						vector-effect="non-scaling-stroke"
 						stroke-linecap="round"
 					/>
@@ -528,7 +543,7 @@
 			bind:this={curtainEl}
 			aria-hidden="true"
 			style="will-change: transform;"
-			class="pointer-events-none absolute inset-0 z-20 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
+			class="pointer-events-none absolute inset-0 z-40 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
 		></div>
 	</section>
 
@@ -557,12 +572,14 @@
 					{#if world.kicker === 'Atelier'}
 						<ThreadDress
 							pathId="mobile-thread-Atelier"
-							class="pointer-events-none absolute right-3 top-3 h-32 w-20 text-accent-light drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]"
+							dotId="mobile-dot-Atelier"
+							class="pointer-events-none absolute right-2 top-2 z-20 h-44 w-28 text-thread"
 						/>
 					{:else}
 						<ThreadFlower
 							pathId="mobile-thread-Floristik"
-							class="pointer-events-none absolute right-3 top-3 h-32 w-20 text-champagne drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]"
+							dotId="mobile-dot-Floristik"
+							class="pointer-events-none absolute right-2 top-2 z-20 h-44 w-28 text-champagne"
 						/>
 					{/if}
 					<div class="relative flex h-full flex-col justify-end gap-2 p-6 text-background">
@@ -590,12 +607,14 @@
 					{#if world.kicker === 'Atelier'}
 						<ThreadDress
 							pathId="desktop-thread-Atelier"
-							class="pointer-events-none absolute right-6 top-6 h-48 w-32 text-accent-light drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] lg:h-56 lg:w-36"
+							dotId="desktop-dot-Atelier"
+							class="pointer-events-none absolute right-6 top-6 z-20 h-64 w-44 text-thread lg:h-72 lg:w-48"
 						/>
 					{:else}
 						<ThreadFlower
 							pathId="desktop-thread-Floristik"
-							class="pointer-events-none absolute right-6 top-6 h-48 w-32 text-champagne drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] lg:h-56 lg:w-36"
+							dotId="desktop-dot-Floristik"
+							class="pointer-events-none absolute right-6 top-6 z-20 h-64 w-44 text-champagne lg:h-72 lg:w-48"
 						/>
 					{/if}
 					<div class="relative flex h-full flex-col items-center justify-end gap-3 p-10 text-center text-background lg:p-14">
@@ -615,7 +634,7 @@
 	<section bind:this={synergyEl} class="relative overflow-hidden bg-background px-6 py-20 sm:px-10 sm:py-28">
 		<ThreadWave
 			pathId="wave-synergy"
-			class="pointer-events-none absolute inset-y-0 left-2 w-10 text-accent/50 sm:left-6 sm:w-14 sm:text-accent/60"
+			class="pointer-events-none absolute inset-y-0 left-2 z-10 w-10 text-thread sm:left-6 sm:w-14"
 		/>
 
 		<div class="mx-auto max-w-5xl text-center">
@@ -641,7 +660,7 @@
 	<section bind:this={lookbookEl} class="relative overflow-hidden bg-nude/10 py-20 sm:py-28">
 		<ThreadWave
 			pathId="wave-lookbook"
-			class="pointer-events-none absolute inset-y-0 right-2 w-10 text-champagne/50 sm:right-6 sm:w-14 sm:text-champagne/60"
+			class="pointer-events-none absolute inset-y-0 right-2 z-10 w-10 text-champagne sm:right-6 sm:w-14"
 		/>
 
 		<div class="mx-auto flex max-w-6xl items-end justify-between gap-6 px-6 sm:px-10">
@@ -699,17 +718,20 @@
 		<svg
 			viewBox="0 0 120 80"
 			aria-hidden="true"
-			class="pointer-events-none relative mx-auto mb-2 block h-16 w-24 text-champagne"
+			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));"
+			class="pointer-events-none relative z-10 mx-auto mb-2 block h-20 w-32 text-champagne"
 		>
 			<path
 				id="cta-loop-path"
 				d="M10,40 C10,20 30,10 45,20 C55,27 55,40 45,45 C35,50 30,38 38,32 C46,26 65,26 75,35 C85,44 85,60 70,65 C58,69 50,58 60,52"
 				fill="none"
 				stroke="currentColor"
-				stroke-width="2.5"
+				stroke-width="4"
+				vector-effect="non-scaling-stroke"
 				stroke-linecap="round"
 				stroke-linejoin="round"
 			/>
+			<circle id="cta-loop-dot" cx="60" cy="52" r="4" fill="currentColor" opacity="0" />
 		</svg>
 
 		<div
