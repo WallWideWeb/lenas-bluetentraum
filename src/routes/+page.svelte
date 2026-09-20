@@ -30,23 +30,73 @@
 		}
 	];
 
-	const synergyPoints = [
+	type SynergyCard = {
+		kicker: string;
+		title: string;
+		description: string;
+		image: string;
+		featured?: boolean;
+	};
+	const synergyCards: SynergyCard[] = [
 		{
-			title: 'Harmonische Farbkonzepte',
+			kicker: 'Hochzeit',
+			title: 'Für den wichtigsten Tag',
 			description:
-				'Garne und Blüten werden aufeinander abgestimmt, damit Kleidung und Dekoration eine gemeinsame Sprache sprechen.'
+				'Festliche Floristik für große Hochzeitsgesellschaften – von würdevollem Kirchenschmuck bis zum Brautstrauß, der jeden Blick auf sich zieht.',
+			image:
+				'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1200&q=80',
+			featured: true
 		},
 		{
-			title: 'Alles aus einer Hand',
+			kicker: 'Atelier',
+			title: 'Maßgeschneiderte Eleganz',
 			description:
-				'Von der Maßanfertigung bis zum Brautstrauß – ein Ansprechpartner begleitet Ihr Projekt von Anfang bis Ende.'
+				'Individuelle, würdevolle Schnitte für Kleider und Röcke, die perfekt sitzen und Ihre Werte widerspiegeln.',
+			image:
+				'https://images.unsplash.com/photo-1618244972963-dbee1a7edc95?auto=format&fit=crop&w=1200&q=80'
 		},
 		{
-			title: 'Liebe zum kleinsten Detail',
+			kicker: 'Harmonie',
+			title: 'Abgestimmte Harmonie',
 			description:
-				'Jeder Saum, jede Blüte wird mit derselben Sorgfalt gefertigt – für Momente, die man fühlt statt nur sieht.'
+				'Wenn der Brautstrauß exakt zum Garn des maßgeschneiderten Kleides passt – aus einer Hand gedacht, bis ins letzte Detail.',
+			image:
+				'https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=1200&q=80'
 		}
 	];
+
+	// Vorher-Nachher-Slider: edles Garn/Stoff (Vision) zu einem fließenden,
+	// maßgeschneiderten Stück (Unikat).
+	let sliderValue = $state(50);
+	const sliderBeforeImage =
+		'https://images.unsplash.com/photo-1670764732222-e787bccd934f?auto=format&fit=crop&w=1200&q=80';
+	const sliderAfterImage =
+		'https://images.unsplash.com/photo-1758186168047-00dd2621d27f?auto=format&fit=crop&w=1200&q=80';
+
+	// Interaktiver 3-Schritte-Inspirations-Finder.
+	const finderServices = [
+		'Brautfloristik',
+		'Maßanfertigung Rock/Kleid',
+		'Event-Dekoration',
+		'Änderungen'
+	] as const;
+	const finderStyles = ['Klassisch & Zeitlos', 'Zart & Romantisch', 'Festlich & Elegant'] as const;
+	let finderStep = $state(1);
+	let finderService: (typeof finderServices)[number] | '' = $state('');
+	let finderStyle: (typeof finderStyles)[number] | '' = $state('');
+	function chooseFinderService(service: (typeof finderServices)[number]) {
+		finderService = service;
+		finderStep = 2;
+	}
+	function chooseFinderStyle(style: (typeof finderStyles)[number]) {
+		finderStyle = style;
+		finderStep = 3;
+	}
+	function restartFinder() {
+		finderStep = 1;
+		finderService = '';
+		finderStyle = '';
+	}
 
 	type LookbookItem = { badge: string; image: string; alt: string };
 	const lookbook: LookbookItem[] = [
@@ -100,6 +150,12 @@
 		`https://wa.me/4915146159350?text=${encodeURIComponent(`Hallo Lena, ich interessiere mich für: ${selectedInterest}`)}`
 	);
 	const emailHref = $derived(`mailto:${email}?subject=${encodeURIComponent(`Anfrage: ${selectedInterest}`)}`);
+	const finderWhatsappHref = $derived(
+		`https://wa.me/4915146159350?text=${encodeURIComponent(`Hallo Lena, ich habe mit dem Inspirations-Finder geschaut: ${finderService}, Stil: ${finderStyle}. Lass uns das besprechen!`)}`
+	);
+	const finderEmailHref = $derived(
+		`mailto:${email}?subject=${encodeURIComponent('Inspirations-Anfrage')}&body=${encodeURIComponent(`Ich interessiere mich für: ${finderService}\nMein Wunschstil: ${finderStyle}`)}`
+	);
 	const currentYear = new Date().getFullYear();
 
 	let headerVisible = $state(false);
@@ -125,7 +181,9 @@
 	let splitHeadingEl: HTMLDivElement;
 	let mobileCards: HTMLAnchorElement[] = $state([]);
 	let desktopPanels: HTMLAnchorElement[] = $state([]);
-	let synergyEl: HTMLElement;
+	let bentoEl: HTMLElement;
+	let sliderSectionEl: HTMLElement;
+	let finderSectionEl: HTMLElement;
 	let lookbookEl: HTMLElement;
 
 	$effect(() => {
@@ -393,6 +451,41 @@
 						});
 					});
 
+					// Bento-Karten: sanftes Einblenden plus ein zart gegenläufiger
+					// Parallax auf dem Bild-Wrapper (nicht auf dem Bild selbst, damit
+					// der Hover-Zoom-Transform des Bildes unangetastet bleibt).
+					if (bentoEl) {
+						bentoEl.querySelectorAll<HTMLElement>('.bento-card').forEach((card, i) => {
+							gsap.from(card, {
+								opacity: 0,
+								y: isMobile ? 20 : 28,
+								duration: isMobile ? 0.6 : 0.8,
+								delay: i * 0.1,
+								ease: 'power2.out',
+								scrollTrigger: { trigger: card, start: 'top 90%' }
+							});
+							if (!reduceMotion) {
+								const parallaxEl = card.querySelector<HTMLElement>('.bento-parallax');
+								if (parallaxEl) {
+									gsap.fromTo(
+										parallaxEl,
+										{ yPercent: -3 },
+										{
+											yPercent: 3,
+											ease: 'none',
+											scrollTrigger: {
+												trigger: card,
+												start: 'top bottom',
+												end: 'bottom top',
+												scrub: true
+											}
+										}
+									);
+								}
+							}
+						});
+					}
+
 					// Gemeinsamer Helfer: zeichnet einen Pfad nach, sobald sein Trigger
 					// von unten ins Bild kommt – so ist immer ein Stück Faden im
 					// Sichtfeld, ohne dass er je "abreißt".
@@ -451,11 +544,27 @@
 					// permanent im Viewport präsent bleibt.
 					wireDraw(
 						document.getElementById('wave-synergy') as SVGPathElement | null,
-						synergyEl,
+						bentoEl,
 						'top bottom',
 						'bottom 30%',
 						null,
 						document.getElementById('wave-needle-synergy') as SVGGElement | null
+					);
+					wireDraw(
+						document.getElementById('wave-slider') as SVGPathElement | null,
+						sliderSectionEl,
+						'top bottom',
+						'bottom 30%',
+						null,
+						document.getElementById('wave-needle-slider') as SVGGElement | null
+					);
+					wireDraw(
+						document.getElementById('wave-finder') as SVGPathElement | null,
+						finderSectionEl,
+						'top bottom',
+						'bottom 30%',
+						null,
+						document.getElementById('wave-needle-finder') as SVGGElement | null
 					);
 					wireDraw(
 						document.getElementById('wave-lookbook') as SVGPathElement | null,
@@ -750,7 +859,7 @@
 		</div>
 	</section>
 
-	<section bind:this={synergyEl} class="relative overflow-hidden bg-background px-6 py-20 sm:px-10 sm:py-28">
+	<section bind:this={bentoEl} class="relative overflow-hidden bg-background px-6 py-20 sm:px-10 sm:py-28">
 		<ThreadWave
 			pathId="wave-synergy"
 			needleId="wave-needle-synergy"
@@ -759,22 +868,207 @@
 		/>
 
 		<div class="mx-auto max-w-5xl text-center">
-			<span class="text-xs uppercase tracking-[0.35em] text-accent">Warum beides zusammengehört</span>
-			<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Das Synergie-Prinzip</h2>
+			<span class="text-xs uppercase tracking-[0.35em] text-accent">Zwei Handwerke für den großen Tag</span>
+			<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Wo Floristik und Schneiderei eins werden</h2>
 		</div>
 
-		<div class="mx-auto mt-14 grid max-w-5xl gap-10 sm:grid-cols-3">
-			{#each synergyPoints as point, i}
-				<div class="text-center">
-					<span
-						class="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-accent/30 font-serif text-lg text-accent"
-					>
-						{i + 1}
-					</span>
-					<h3 class="mt-5 font-serif text-xl text-ink">{point.title}</h3>
-					<p class="mt-3 text-sm leading-relaxed text-ink/70">{point.description}</p>
+		<div class="mx-auto mt-14 grid max-w-6xl gap-5 sm:grid-cols-2 sm:gap-6">
+			{#each synergyCards as card}
+				<div
+					class="bento-card group relative overflow-hidden rounded-[2rem] shadow-lg {card.featured
+						? 'aspect-[4/5] sm:col-span-2 sm:aspect-[21/9]'
+						: 'aspect-[4/5]'}"
+				>
+					<div class="bento-parallax absolute inset-x-0 -top-[6%] h-[112%] w-full overflow-hidden">
+						<img
+							src={card.image}
+							alt=""
+							loading="lazy"
+							class="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-110"
+						/>
+					</div>
+					<div class="absolute inset-0 bg-linear-to-t from-ink/75 via-ink/15 to-transparent"></div>
+					<div class="relative flex h-full flex-col justify-end gap-2 p-7 text-background sm:p-9">
+						<span class="text-xs uppercase tracking-[0.3em] text-background/80">{card.kicker}</span>
+						<h3 class="font-serif text-2xl sm:text-3xl">{card.title}</h3>
+						<p class="max-w-md text-sm leading-relaxed text-background/85 sm:text-base">
+							{card.description}
+						</p>
+					</div>
 				</div>
 			{/each}
+		</div>
+	</section>
+
+	<section
+		bind:this={sliderSectionEl}
+		class="relative overflow-hidden bg-nude/15 px-6 py-20 sm:px-10 sm:py-28"
+	>
+		<ThreadWave
+			pathId="wave-slider"
+			needleId="wave-needle-slider"
+			needleScale={0.65}
+			class="pointer-events-none absolute inset-y-0 right-2 z-10 w-10 text-champagne sm:right-6 sm:w-14"
+		/>
+
+		<div class="mx-auto max-w-2xl text-center">
+			<span class="text-xs uppercase tracking-[0.35em] text-accent">Handwerk fühlbar machen</span>
+			<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Von der Vision zum Unikat</h2>
+			<p class="mt-3 text-sm text-ink/70 sm:text-base">
+				Bewegen Sie den Regler und erleben Sie, wie aus feinem Garn ein maßgeschneidertes Unikat
+				entsteht.
+			</p>
+		</div>
+
+		<div
+			class="relative mx-auto mt-12 aspect-[3/4] w-full max-w-md touch-none overflow-hidden rounded-[2.5rem] shadow-[0_40px_80px_-30px_rgba(28,29,31,0.35)]"
+		>
+			<img
+				src={sliderAfterImage}
+				alt="Das fertige Unikat: ein maßgeschneiderter Rock"
+				class="absolute inset-0 h-full w-full object-cover object-top"
+			/>
+			<div
+				class="absolute inset-0 h-full w-full overflow-hidden"
+				style="clip-path: inset(0 {100 - sliderValue}% 0 0);"
+			>
+				<img
+					src={sliderBeforeImage}
+					alt="Feines Garn als Ausgangspunkt"
+					class="absolute inset-0 h-full w-full object-cover object-top"
+				/>
+			</div>
+
+			<div
+				aria-hidden="true"
+				class="pointer-events-none absolute inset-y-0 z-10 w-[3px] -translate-x-1/2 bg-linear-to-b from-champagne/0 via-champagne to-champagne/0 shadow-[0_0_14px_rgba(212,175,55,0.75)]"
+				style="left: {sliderValue}%;"
+			></div>
+			<div
+				aria-hidden="true"
+				class="pointer-events-none absolute top-1/2 z-10 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-champagne bg-background text-champagne shadow-lg"
+				style="left: {sliderValue}%;"
+			>
+				<span class="text-sm">↔</span>
+			</div>
+
+			<span
+				class="pointer-events-none absolute left-4 top-4 rounded-full bg-background/85 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-ink backdrop-blur-sm"
+			>
+				Die Vision
+			</span>
+			<span
+				class="pointer-events-none absolute right-4 top-4 rounded-full bg-ink/70 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-background backdrop-blur-sm"
+			>
+				Das Unikat
+			</span>
+
+			<input
+				type="range"
+				min="0"
+				max="100"
+				bind:value={sliderValue}
+				aria-label="Vorher-Nachher-Vergleich: Garn zu maßgeschneidertem Unikat"
+				class="absolute inset-0 z-20 h-full w-full cursor-ew-resize appearance-none bg-transparent opacity-0"
+			/>
+		</div>
+	</section>
+
+	<section
+		bind:this={finderSectionEl}
+		class="relative overflow-hidden bg-background px-6 py-20 sm:px-10 sm:py-28"
+	>
+		<ThreadWave
+			pathId="wave-finder"
+			needleId="wave-needle-finder"
+			needleScale={0.65}
+			class="pointer-events-none absolute inset-y-0 left-2 z-10 w-10 text-thread sm:left-6 sm:w-14"
+		/>
+
+		<div class="mx-auto max-w-2xl text-center">
+			<span class="text-xs uppercase tracking-[0.35em] text-accent">Ihr persönlicher Inspirations-Finder</span>
+			<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Finden Sie Ihren Stil</h2>
+		</div>
+
+		<div class="mx-auto mt-10 flex items-center justify-center gap-3">
+			{#each [1, 2, 3] as step}
+				<span
+					class="flex h-8 w-8 items-center justify-center rounded-full border font-serif text-sm transition-colors {finderStep >=
+					step
+						? 'border-accent bg-accent text-background'
+						: 'border-ink/20 text-ink/50'}"
+				>
+					{step}
+				</span>
+				{#if step < 3}
+					<span class="h-px w-8 {finderStep > step ? 'bg-accent' : 'bg-ink/15'}"></span>
+				{/if}
+			{/each}
+		</div>
+
+		<div
+			class="mx-auto mt-10 max-w-xl rounded-[2.5rem] border border-ink/10 bg-nude/10 p-8 text-center shadow-[0_30px_70px_-40px_rgba(28,29,31,0.3)] sm:p-12"
+		>
+			{#if finderStep === 1}
+				<h3 class="font-serif text-xl text-ink">Was dürfen wir für dich kreieren?</h3>
+				<div class="mt-6 flex flex-wrap justify-center gap-3">
+					{#each finderServices as service}
+						<button
+							type="button"
+							onclick={() => chooseFinderService(service)}
+							class="rounded-full border border-ink/15 px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:border-accent hover:bg-accent hover:text-background"
+						>
+							{service}
+						</button>
+					{/each}
+				</div>
+			{:else if finderStep === 2}
+				<h3 class="font-serif text-xl text-ink">Dein Wunschstil</h3>
+				<div class="mt-6 flex flex-wrap justify-center gap-3">
+					{#each finderStyles as style}
+						<button
+							type="button"
+							onclick={() => chooseFinderStyle(style)}
+							class="rounded-full border border-ink/15 px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:border-accent hover:bg-accent hover:text-background"
+						>
+							{style}
+						</button>
+					{/each}
+				</div>
+				<button
+					type="button"
+					onclick={() => (finderStep = 1)}
+					class="mt-6 text-xs uppercase tracking-[0.2em] text-ink/50 hover:text-accent"
+				>
+					← Zurück
+				</button>
+			{:else}
+				<h3 class="font-serif text-xl text-ink">Ihre Inspiration ist bereit</h3>
+				<p class="mt-3 text-sm text-ink/70">{finderService} · {finderStyle}</p>
+				<div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+					<a
+						href={finderWhatsappHref}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-accent-light"
+					>
+						Jetzt besprechen
+					</a>
+					<a
+						href={finderEmailHref}
+						class="inline-flex items-center gap-2 rounded-full border border-ink/20 px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-background"
+					>
+						Per E-Mail
+					</a>
+				</div>
+				<button
+					type="button"
+					onclick={restartFinder}
+					class="mt-6 text-xs uppercase tracking-[0.2em] text-ink/50 hover:text-accent"
+				>
+					Neu starten
+				</button>
+			{/if}
 		</div>
 	</section>
 
