@@ -17,7 +17,7 @@
 			title: 'Atelier & Garn',
 			description: 'Schneiderei, Maßanfertigungen und Handwerk mit Liebe zum Detail.',
 			image:
-				'https://images.unsplash.com/photo-1600287792237-3f66db635a73?auto=format&fit=crop&w=1200&q=80',
+				'https://images.unsplash.com/photo-1779378106780-3016bc3c7915?auto=format&fit=crop&w=1200&q=80',
 			href: '/atelier-garn'
 		},
 		{
@@ -141,6 +141,22 @@
 	const interests = ['Braut & Hochzeit', 'Maßanfertigung', 'Florales Design'] as const;
 	let selectedInterest: (typeof interests)[number] = $state(interests[0]);
 
+	// Werte-Brücke direkt nach Lenas Zitat: kein toter Scroll-Raum, sondern
+	// ein kurzer, ruhiger Beleg für die eigenen Werte.
+	const valueBadges = ['Maßarbeit', 'Persönliche Begleitung', 'Zeitlose Eleganz'] as const;
+
+	// Frühe, spielerische Inspirations-Schnellauswahl direkt danach: ein Klick
+	// öffnet sofort ein sympathisches, vorausgefülltes WhatsApp-Fenster.
+	const quickIntents = [
+		'Maßkleid & Festrock',
+		'Festliche Floristik & Deko',
+		'Ganzheitliches Fest-Konzept'
+	] as const;
+	let quickIntent: (typeof quickIntents)[number] | '' = $state('');
+	function chooseQuickIntent(intent: (typeof quickIntents)[number]) {
+		quickIntent = quickIntent === intent ? '' : intent;
+	}
+
 	const phoneDisplay = '+49 151 46159350';
 	const phoneHref = 'tel:+4915146159350';
 	const email = 'info@lenas-bluetentraum.de';
@@ -155,6 +171,9 @@
 	);
 	const finderEmailHref = $derived(
 		`mailto:${email}?subject=${encodeURIComponent('Inspirations-Anfrage')}&body=${encodeURIComponent(`Ich interessiere mich für: ${finderService}\nMein Wunschstil: ${finderStyle}`)}`
+	);
+	const quickIntentWhatsappHref = $derived(
+		`https://wa.me/4915146159350?text=${encodeURIComponent(`Hallo Lena, ich möchte unverbindlich anfragen: ${quickIntent}. Lass uns das besprechen!`)}`
 	);
 	const currentYear = new Date().getFullYear();
 
@@ -177,6 +196,8 @@
 	let curtainEl: HTMLDivElement;
 	let scrollHintEl: HTMLDivElement;
 	let scrollLineEl: HTMLSpanElement;
+	let bridgeEl: HTMLElement;
+	let selectorEl: HTMLElement;
 	let splitEl: HTMLElement;
 	let splitHeadingEl: HTMLDivElement;
 	let mobileCards: HTMLAnchorElement[] = $state([]);
@@ -227,11 +248,20 @@
 					const p = pathEl.getPointAtLength(currentLen);
 					const pNext = pathEl.getPointAtLength(Math.min(currentLen + 2, pathLength));
 					const angle = Math.atan2(pNext.y - p.y, pNext.x - p.x) * (180 / Math.PI);
+					// Sanfte, organische Stich-Bewegung: eine leichte Sinus-Neigung
+					// obendrauf auf den reinen Tangentenwinkel, damit die Nadel wie
+					// beim aktiven Handnähen minimal "wippt", statt starr zu gleiten.
+					const stitchWobble = Math.sin(progress * Math.PI * 26) * 5;
 					if (activeNeedleEl && activeNeedleEl !== needleGroupEl) {
 						gsap.set(activeNeedleEl, { opacity: 0 });
 					}
 					activeNeedleEl = needleGroupEl;
-					gsap.set(needleGroupEl, { opacity: 1, x: p.x, y: p.y, rotation: angle });
+					gsap.set(needleGroupEl, {
+						opacity: 1,
+						x: p.x,
+						y: p.y,
+						rotation: angle + stitchWobble
+					});
 				};
 
 				gsap.set(curtainEl, { yPercent: 100 });
@@ -562,6 +592,22 @@
 					// Verbindende Wellenlinien zwischen den Stationen, damit der Faden
 					// permanent im Viewport präsent bleibt.
 					wireDraw(
+						document.getElementById('wave-bridge') as SVGPathElement | null,
+						bridgeEl,
+						'top bottom',
+						'bottom 30%',
+						null,
+						document.getElementById('wave-needle-bridge') as SVGGElement | null
+					);
+					wireDraw(
+						document.getElementById('wave-selector') as SVGPathElement | null,
+						selectorEl,
+						'top bottom',
+						'bottom 30%',
+						null,
+						document.getElementById('wave-needle-selector') as SVGGElement | null
+					);
+					wireDraw(
 						document.getElementById('wave-synergy') as SVGPathElement | null,
 						bentoEl,
 						'top bottom',
@@ -652,7 +698,7 @@
 		<svg
 			viewBox="0 0 40 100"
 			aria-hidden="true"
-			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));"
+			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(200, 162, 122, 0.65));"
 			class="pointer-events-none absolute left-1/2 top-[30%] z-20 h-[24vh] w-16 -translate-x-1/2 text-thread"
 		>
 			<path
@@ -675,11 +721,20 @@
 			<g
 				bind:this={heroNeedleEl}
 				opacity="0"
-				style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+				style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 6px rgba(212, 175, 55, 0.85));"
 			>
 				<g transform="scale(0.6)">
 					<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#hero-needle-grad)" />
 					<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#hero-needle-grad)" stroke-width="1.8" />
+					<circle cx="-9" cy="1.6" r="1.7" fill="#F7E7C4" opacity="0.85">
+						<animate attributeName="opacity" values="0.85;0.25;0.85" dur="0.9s" repeatCount="indefinite" />
+					</circle>
+					<circle cx="-21" cy="-1.4" r="1.2" fill="#F7E7C4" opacity="0.55">
+						<animate attributeName="opacity" values="0.55;0.15;0.55" dur="1.3s" repeatCount="indefinite" />
+					</circle>
+					<circle cx="-33" cy="1" r="0.8" fill="#F7E7C4" opacity="0.3">
+						<animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
+					</circle>
 				</g>
 			</g>
 		</svg>
@@ -732,7 +787,7 @@
 					viewBox="0 0 100 120"
 					preserveAspectRatio="none"
 					aria-hidden="true"
-					style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));"
+					style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(200, 162, 122, 0.65));"
 					class="pointer-events-none absolute -inset-5 z-30 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)] text-thread"
 				>
 					<path
@@ -755,11 +810,20 @@
 					<g
 						bind:this={frameNeedleEl}
 						opacity="0"
-						style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+						style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 6px rgba(212, 175, 55, 0.85));"
 					>
 						<g transform="scale(0.25)">
 							<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#frame-needle-grad)" />
 							<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#frame-needle-grad)" stroke-width="1.8" />
+							<circle cx="-9" cy="1.6" r="1.7" fill="#F7E7C4" opacity="0.85">
+								<animate attributeName="opacity" values="0.85;0.25;0.85" dur="0.9s" repeatCount="indefinite" />
+							</circle>
+							<circle cx="-21" cy="-1.4" r="1.2" fill="#F7E7C4" opacity="0.55">
+								<animate attributeName="opacity" values="0.55;0.15;0.55" dur="1.3s" repeatCount="indefinite" />
+							</circle>
+							<circle cx="-33" cy="1" r="0.8" fill="#F7E7C4" opacity="0.3">
+								<animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
+							</circle>
 						</g>
 					</g>
 				</svg>
@@ -784,6 +848,85 @@
 			style="will-change: transform;"
 			class="pointer-events-none absolute inset-0 z-40 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
 		></div>
+	</section>
+
+	<section
+		bind:this={bridgeEl}
+		class="relative overflow-hidden bg-mist px-6 py-12 sm:py-16"
+	>
+		<ThreadWave
+			pathId="wave-bridge"
+			needleId="wave-needle-bridge"
+			needleScale={0.6}
+			class="pointer-events-none absolute inset-y-0 left-2 z-10 w-10 text-thread sm:left-6 sm:w-14"
+		/>
+
+		<div class="mx-auto max-w-xl text-center">
+			<p class="font-serif text-xl italic text-ink/80 sm:text-2xl">
+				Jeder Stich mit Bedacht. Jede Blüte mit Hingabe.
+			</p>
+			<div class="mt-7 flex flex-wrap items-center justify-center gap-3">
+				{#each valueBadges as badge}
+					<span
+						class="rounded-full border border-accent/25 bg-background/70 px-5 py-2 text-xs font-medium uppercase tracking-[0.2em] text-ink/70"
+					>
+						{badge}
+					</span>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<section
+		bind:this={selectorEl}
+		class="relative overflow-hidden bg-background px-6 py-14 sm:py-20"
+	>
+		<ThreadWave
+			pathId="wave-selector"
+			needleId="wave-needle-selector"
+			needleScale={0.6}
+			class="pointer-events-none absolute inset-y-0 right-2 z-10 w-10 text-champagne sm:right-6 sm:w-14"
+		/>
+
+		<div class="mx-auto max-w-2xl text-center">
+			<h2 class="font-serif text-2xl text-ink sm:text-3xl">Was darf für dich entstehen?</h2>
+			<div class="mt-8 flex flex-wrap justify-center gap-3">
+				{#each quickIntents as intent}
+					<button
+						type="button"
+						onclick={() => chooseQuickIntent(intent)}
+						aria-pressed={quickIntent === intent}
+						class="rounded-full border px-5 py-2.5 text-sm font-medium transition-colors {quickIntent ===
+						intent
+							? 'border-accent bg-accent text-background'
+							: 'border-ink/15 text-ink hover:border-accent/40'}"
+					>
+						{intent}
+					</button>
+				{/each}
+			</div>
+
+			{#if quickIntent}
+				<div
+					class="mx-auto mt-8 max-w-md rounded-3xl border border-accent/20 bg-nude/10 p-6 text-center"
+				>
+					<p class="text-sm text-ink/70">
+						Wunderbar! Lass uns unverbindlich über <span class="font-medium text-ink"
+							>„{quickIntent}“</span
+						>
+						sprechen.
+					</p>
+					<a
+						href={quickIntentWhatsappHref}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="mt-5 inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-accent-light"
+					>
+						Projekt unverbindlich anfragen
+					</a>
+				</div>
+			{/if}
+		</div>
 	</section>
 
 	<section bind:this={splitEl} id="welten" class="relative bg-background">
@@ -1154,7 +1297,7 @@
 		<svg
 			viewBox="0 0 120 80"
 			aria-hidden="true"
-			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));"
+			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(200, 162, 122, 0.65));"
 			class="pointer-events-none relative z-10 mx-auto mb-2 block h-20 w-32 text-champagne"
 		>
 			<path
@@ -1179,11 +1322,20 @@
 			<g
 				bind:this={ctaNeedleEl}
 				opacity="0"
-				style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+				style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 6px rgba(212, 175, 55, 0.85));"
 			>
 				<g transform="scale(1)">
 					<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#cta-needle-grad)" />
 					<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#cta-needle-grad)" stroke-width="1.8" />
+					<circle cx="-9" cy="1.6" r="1.7" fill="#F7E7C4" opacity="0.85">
+						<animate attributeName="opacity" values="0.85;0.25;0.85" dur="0.9s" repeatCount="indefinite" />
+					</circle>
+					<circle cx="-21" cy="-1.4" r="1.2" fill="#F7E7C4" opacity="0.55">
+						<animate attributeName="opacity" values="0.55;0.15;0.55" dur="1.3s" repeatCount="indefinite" />
+					</circle>
+					<circle cx="-33" cy="1" r="0.8" fill="#F7E7C4" opacity="0.3">
+						<animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
+					</circle>
 				</g>
 			</g>
 		</svg>

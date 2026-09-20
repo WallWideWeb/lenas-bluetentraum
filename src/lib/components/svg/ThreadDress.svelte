@@ -21,7 +21,7 @@
 <svg
 	viewBox="0 0 200 320"
 	class={className}
-	style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));"
+	style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(200, 162, 122, 0.65));"
 	aria-hidden="true"
 	focusable="false"
 >
@@ -50,7 +50,7 @@
 		<g
 			id={needleId}
 			opacity="0"
-			style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+			style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 6px rgba(212, 175, 55, 0.85));"
 		>
 			<g transform="scale({needleScale})">
 				<path
@@ -66,6 +66,16 @@
 					stroke="url(#{needleId}-grad)"
 					stroke-width="1.8"
 				/>
+				<!-- Funkelnder Partikelschweif, der der Nadel beim Nähen hinterherzieht -->
+				<circle cx="-9" cy="1.6" r="1.7" fill="#F7E7C4" opacity="0.85">
+					<animate attributeName="opacity" values="0.85;0.25;0.85" dur="0.9s" repeatCount="indefinite" />
+				</circle>
+				<circle cx="-21" cy="-1.4" r="1.2" fill="#F7E7C4" opacity="0.55">
+					<animate attributeName="opacity" values="0.55;0.15;0.55" dur="1.3s" repeatCount="indefinite" />
+				</circle>
+				<circle cx="-33" cy="1" r="0.8" fill="#F7E7C4" opacity="0.3">
+					<animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
+				</circle>
 			</g>
 		</g>
 	{/if}

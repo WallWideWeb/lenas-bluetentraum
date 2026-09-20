@@ -19,8 +19,9 @@
 	/* Champagner/Gold für filigrane Akzente (Faden-Motiv) */
 	--color-champagne: #d4af37;
 
-	/* Sattes Rauchblau, eigens für den Faden (kräftiger als --color-accent) */
-	--color-thread: #4a6b82;
+	/* Warmer Champagner-Gold, eigens für den Faden – ersetzt das vorige
+	   Rauchblau, damit der Faden als edler Eyecatcher sofort ins Auge fällt */
+	--color-thread: #c8a27a;
 }
 
 @layer base {
