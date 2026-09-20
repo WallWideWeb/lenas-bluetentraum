@@ -307,16 +307,15 @@
 						return;
 					}
 
-					// Pin-Distanz gestrafft (vorher +=75%): Lenas Reveal behält sein
-					// bisheriges Lesetempo (Phasen 1+2 enden weiterhin bei ~45% der
-					// Heldenhöhe), aber die Übergangsphase danach – Vorhang hoch,
-					// Lena raus, Split-Section andocken – ist jetzt nur noch halb so
-					// lang, damit kein toter Raum nach Lenas Bereich entsteht.
+					// Pin-Distanz nochmals deutlich gestrafft (vorher +=60%, davor
+					// +=75%): die Übergangsphase (Vorhang hoch, Lena raus,
+					// Split-Section andocken) ist jetzt spürbar kürzer, damit kein
+					// toter Scroll-Raum nach Lenas Bereich mehr entsteht.
 					const flyTl = gsap.timeline({
 						scrollTrigger: {
 							trigger: heroEl,
 							start: 'top top',
-							end: '+=60%',
+							end: '+=40%',
 							pin: true,
 							scrub: 1,
 							anticipatePin: 1
@@ -346,6 +345,15 @@
 								moveNeedle(heroThreadPathEl, this.progress(), heroNeedleEl);
 							}
 						}, 0.2)
+						// Der kurze Hero-Faden bleibt sonst als fixer, horizontal
+						// zentrierter Strich stehen und würde Lenas Foto (das auf Mobile
+						// ebenfalls zentriert ist) durchschneiden. Er blendet aus, sobald
+						// der Rahmen-Faden um das Bild herum die Führung übernimmt.
+						.to(
+							heroThreadPathEl,
+							{ opacity: 0, ease: 'none', duration: 0.08 },
+							0.28
+						)
 						.to(
 							logoEl,
 							{
@@ -383,23 +391,23 @@
 						.to(aboutFramePathEl, {
 							strokeDashoffset: 0,
 							ease: 'none',
-							duration: 0.45,
+							duration: 0.36,
 							onUpdate: function () {
 								moveNeedle(aboutFramePathEl, this.progress(), frameNeedleEl);
 							}
 						}, 0.3)
-						// Stille Haltephase bis 75% (keine Tweens nötig).
-						// Phase 3 (75% – 100%): Split-Section dockt an, Lena-Szene gleitet
+						// Kurze Lesepause bis 66% (statt vormals 75%).
+						// Phase 3 (66% – 92%): Split-Section dockt an, Lena-Szene gleitet
 						// weich raus – kompakt, damit unmittelbar nach Lena weiterlesbar ist.
 						.to(
 							aboutEl,
-							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.25 },
-							0.75
+							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.22 },
+							0.66
 						)
 						.to(
 							curtainEl,
-							{ yPercent: 0, ease: 'power2.inOut', duration: 0.25 },
-							0.75
+							{ yPercent: 0, ease: 'power2.inOut', duration: 0.22 },
+							0.66
 						)
 						.to(
 							headerEl,
@@ -410,7 +418,7 @@
 								onStart: () => (headerVisible = true),
 								onReverseComplete: () => (headerVisible = false)
 							},
-							0.9
+							0.82
 						);
 
 					if (!isMobile) {
@@ -617,11 +625,11 @@
 	<span class="font-serif text-sm tracking-wide text-ink sm:text-base">Lena's Garn &amp; Blütentraum</span>
 </header>
 
-<main>
+<main class="bg-accent">
 	<section
 		bind:this={heroEl}
 		id="hero"
-		class="relative flex h-svh min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-background"
+		class="relative flex h-svh min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-accent"
 	>
 		<div
 			bind:this={glowEl}
@@ -718,7 +726,7 @@
 				>
 					<path
 						bind:this={aboutFramePathEl}
-						d="M20,8 C2,20 -2,55 5,90 C10,108 25,118 50,119 C75,118 92,105 96,82 C99,65 94,40 82,22"
+						d="M10,4 C-6,18 -6,58 2,94 C8,110 26,119 50,119 C74,119 92,110 98,94 C106,58 106,18 90,4"
 						fill="none"
 						stroke="currentColor"
 						stroke-width="4"
@@ -768,7 +776,7 @@
 	</section>
 
 	<section bind:this={splitEl} id="welten" class="relative bg-background">
-		<div bind:this={splitHeadingEl} class="mx-auto max-w-2xl px-6 pb-10 pt-16 text-center sm:pt-24">
+		<div bind:this={splitHeadingEl} class="mx-auto max-w-2xl px-6 pb-10 pt-6 text-center sm:pt-10">
 			<h2 class="font-serif text-2xl text-ink sm:text-3xl">Zwei Welten, eine Leidenschaft</h2>
 			<p class="mt-3 text-sm text-ink/70 sm:text-base">
 				Von zarten Garnen bis zu duftenden Blüten – entdecken Sie, wofür Lena brennt.
