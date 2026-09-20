@@ -12,6 +12,9 @@
 	/* Zarte Nude-/Rosé-Nuancen */
 	--color-nude: #e8dcd2;
 	--color-rose: #e3c9c3;
+
+	/* Champagner/Gold für filigrane Akzente (Faden-Motiv) */
+	--color-champagne: #c9a876;
 }
 
 @layer base {

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import ThreadDress from '$lib/components/svg/ThreadDress.svelte';
+	import ThreadFlower from '$lib/components/svg/ThreadFlower.svelte';
+
 	type World = {
 		kicker: string;
 		title: string;
@@ -109,6 +112,8 @@
 	let aboutImageWrapEl: HTMLDivElement;
 	let aboutImageEl: HTMLImageElement;
 	let aboutTextEl: HTMLDivElement;
+	let heroThreadPathEl: SVGPathElement;
+	let aboutFramePathEl: SVGPathElement;
 	let curtainEl: HTMLDivElement;
 	let scrollHintEl: HTMLDivElement;
 	let scrollLineEl: HTMLSpanElement;
@@ -136,6 +141,11 @@
 				gsap.set(curtainEl, { yPercent: 100 });
 				gsap.set(aboutImageWrapEl, { opacity: 0, scale: 0.95, y: 28 });
 				gsap.set(aboutTextEl, { opacity: 0, y: 20 });
+
+				const heroThreadLen = heroThreadPathEl.getTotalLength();
+				gsap.set(heroThreadPathEl, { strokeDasharray: heroThreadLen, strokeDashoffset: heroThreadLen });
+				const aboutFrameLen = aboutFramePathEl.getTotalLength();
+				gsap.set(aboutFramePathEl, { strokeDasharray: aboutFrameLen, strokeDashoffset: aboutFrameLen });
 
 				if (reduceMotion) {
 					gsap.set([logoWrapEl, scrollHintEl], { opacity: 1, y: 0, scale: 1 });
@@ -213,8 +223,10 @@
 					});
 
 					flyTl
-						// Phase 1 (0% – 35%): Logo + Glow fliegen cineastisch weg.
+						// Phase 1 (0% – 35%): Logo + Glow fliegen cineastisch weg,
+						// der Faden löst sich und wächst nach unten.
 						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.04, ease: 'none' }, 0)
+						.to(heroThreadPathEl, { strokeDashoffset: 0, ease: 'none', duration: 0.35 }, 0)
 						.to(
 							logoEl,
 							{
@@ -249,6 +261,7 @@
 							{ opacity: 1, y: 0, ease: 'power2.out', duration: 0.32 },
 							0.28
 						)
+						.to(aboutFramePathEl, { strokeDashoffset: 0, ease: 'none', duration: 0.35 }, 0.25)
 						// Stille Haltephase bis 60% (keine Tweens nötig).
 						// Phase 3 (60% – 100%): Split-Section dockt an, Lena-Szene gleitet
 						// weich raus – über die volle Distanz, damit nie leerer Hintergrund steht.
@@ -311,6 +324,45 @@
 							}
 						});
 					});
+
+					// Faden zeichnet im jeweiligen Kartenbereich das Kleid bzw. die Blüte.
+					const prefix = isMobile ? 'mobile' : 'desktop';
+					worlds.forEach((world, i) => {
+						const pathEl = document.getElementById(
+							`${prefix}-thread-${world.kicker}`
+						) as SVGPathElement | null;
+						const triggerEl = revealTargets[i];
+						if (!pathEl || !triggerEl) return;
+						const len = pathEl.getTotalLength();
+						gsap.set(pathEl, { strokeDasharray: len, strokeDashoffset: len });
+						gsap.to(pathEl, {
+							strokeDashoffset: 0,
+							ease: 'none',
+							scrollTrigger: {
+								trigger: triggerEl,
+								start: 'top 85%',
+								end: 'top 30%',
+								scrub: 1.5
+							}
+						});
+					});
+
+					// Faden mündet in eine kleine Schleife über dem Anfrage-Bereich.
+					const ctaLoopPathEl = document.getElementById('cta-loop-path') as SVGPathElement | null;
+					if (ctaLoopPathEl) {
+						const loopLen = ctaLoopPathEl.getTotalLength();
+						gsap.set(ctaLoopPathEl, { strokeDasharray: loopLen, strokeDashoffset: loopLen });
+						gsap.to(ctaLoopPathEl, {
+							strokeDashoffset: 0,
+							ease: 'none',
+							scrollTrigger: {
+								trigger: ctaLoopPathEl,
+								start: 'top 80%',
+								end: 'top 40%',
+								scrub: 1.5
+							}
+						});
+					}
 				};
 
 				mm = gsap.matchMedia();
@@ -356,6 +408,23 @@
 			class="pointer-events-none absolute left-1/2 top-1/2 h-[60vmax] w-[60vmax] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/40 opacity-50 blur-3xl"
 		></div>
 
+		<svg
+			viewBox="0 0 100 100"
+			preserveAspectRatio="none"
+			aria-hidden="true"
+			class="pointer-events-none absolute inset-0 z-[12] h-full w-full text-accent/70"
+		>
+			<path
+				bind:this={heroThreadPathEl}
+				d="M50,34 C45,42 55,50 49,58 C44,64 50,68 50,71"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				vector-effect="non-scaling-stroke"
+				stroke-linecap="round"
+			/>
+		</svg>
+
 		<div bind:this={logoWrapEl}>
 			<img
 				bind:this={logoEl}
@@ -399,6 +468,23 @@
 					style="object-position: top center; will-change: filter;"
 					class="aspect-[4/5] w-full rounded-[3rem_1.25rem_3rem_1.25rem] object-cover shadow-[0_35px_70px_-25px_rgba(180,130,95,0.45)]"
 				/>
+
+				<svg
+					viewBox="0 0 100 120"
+					preserveAspectRatio="none"
+					aria-hidden="true"
+					class="pointer-events-none absolute -inset-5 z-20 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)] text-accent"
+				>
+					<path
+						bind:this={aboutFramePathEl}
+						d="M20,8 C2,20 -2,55 5,90 C10,108 25,118 50,119 C75,118 92,105 96,82 C99,65 94,40 82,22"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						vector-effect="non-scaling-stroke"
+						stroke-linecap="round"
+					/>
+				</svg>
 			</div>
 
 			<div
@@ -444,6 +530,17 @@
 						class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-active:scale-105"
 					/>
 					<div class="absolute inset-0 bg-linear-to-t from-ink/80 via-ink/20 to-transparent"></div>
+					{#if world.kicker === 'Atelier'}
+						<ThreadDress
+							pathId="mobile-thread-Atelier"
+							class="pointer-events-none absolute right-3 top-3 h-32 w-20 text-accent-light drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]"
+						/>
+					{:else}
+						<ThreadFlower
+							pathId="mobile-thread-Floristik"
+							class="pointer-events-none absolute right-3 top-3 h-32 w-20 text-champagne drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]"
+						/>
+					{/if}
 					<div class="relative flex h-full flex-col justify-end gap-2 p-6 text-background">
 						<span class="text-xs uppercase tracking-[0.3em] text-background/80">{world.kicker}</span>
 						<h3 class="font-serif text-2xl">{world.title}</h3>
@@ -466,6 +563,17 @@
 				>
 					<img src={world.image} alt="" loading="lazy" class="split-img absolute inset-0 h-full w-full object-cover" />
 					<div class="absolute inset-0 bg-linear-to-t from-ink/70 via-ink/10 to-transparent"></div>
+					{#if world.kicker === 'Atelier'}
+						<ThreadDress
+							pathId="desktop-thread-Atelier"
+							class="pointer-events-none absolute right-6 top-6 h-48 w-32 text-accent-light drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] lg:h-56 lg:w-36"
+						/>
+					{:else}
+						<ThreadFlower
+							pathId="desktop-thread-Floristik"
+							class="pointer-events-none absolute right-6 top-6 h-48 w-32 text-champagne drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] lg:h-56 lg:w-36"
+						/>
+					{/if}
 					<div class="relative flex h-full flex-col items-center justify-end gap-3 p-10 text-center text-background lg:p-14">
 						<span class="text-xs uppercase tracking-[0.35em] text-background/80">{world.kicker}</span>
 						<h3 class="font-serif text-3xl lg:text-4xl">{world.title}</h3>
@@ -554,6 +662,22 @@
 	</section>
 
 	<section class="relative overflow-hidden bg-linear-to-b from-accent/10 via-background to-background px-6 py-20 sm:px-10 sm:py-28">
+		<svg
+			viewBox="0 0 120 80"
+			aria-hidden="true"
+			class="pointer-events-none relative mx-auto mb-2 block h-16 w-24 text-champagne"
+		>
+			<path
+				id="cta-loop-path"
+				d="M10,40 C10,20 30,10 45,20 C55,27 55,40 45,45 C35,50 30,38 38,32 C46,26 65,26 75,35 C85,44 85,60 70,65 C58,69 50,58 60,52"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+		</svg>
+
 		<div
 			class="mx-auto max-w-2xl rounded-[2.5rem] border border-white/40 bg-background/60 p-8 text-center shadow-[0_40px_80px_-40px_rgba(28,29,31,0.35)] backdrop-blur-xl sm:p-14"
 		>
