@@ -33,6 +33,10 @@
 	let glowEl: HTMLDivElement;
 	let logoWrapEl: HTMLDivElement;
 	let logoEl: HTMLImageElement;
+	let aboutEl: HTMLDivElement;
+	let aboutImageWrapEl: HTMLDivElement;
+	let aboutImageEl: HTMLImageElement;
+	let aboutTextEl: HTMLDivElement;
 	let curtainEl: HTMLDivElement;
 	let scrollHintEl: HTMLDivElement;
 	let scrollLineEl: HTMLSpanElement;
@@ -58,6 +62,8 @@
 				const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 				gsap.set(curtainEl, { yPercent: 100 });
+				gsap.set(aboutImageWrapEl, { opacity: 0, scale: 0.95, y: 28 });
+				gsap.set(aboutTextEl, { opacity: 0, y: 20 });
 
 				if (reduceMotion) {
 					gsap.set([logoWrapEl, scrollHintEl], { opacity: 1, y: 0, scale: 1 });
@@ -135,7 +141,8 @@
 					});
 
 					flyTl
-						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.06, ease: 'none' }, 0)
+						// 0% – 40%: Logo + Glow fliegen weg, kein Leerlauf danach.
+						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.05, ease: 'none' }, 0)
 						.to(
 							logoEl,
 							{
@@ -143,9 +150,9 @@
 								yPercent: -120,
 								opacity: 0,
 								ease: 'power1.in',
-								duration: 0.55
+								duration: 0.38
 							},
-							0.05
+							0.02
 						)
 						.to(
 							glowEl,
@@ -153,30 +160,55 @@
 								scale: isMobile ? 2.4 : 3.2,
 								opacity: 0,
 								ease: 'none',
-								duration: 0.65
+								duration: 0.4
 							},
 							0
 						)
+						// 25% – 60%: "Über Lena"-Szene blendet synchron ein.
+						.fromTo(
+							aboutImageWrapEl,
+							{ opacity: 0, scale: 0.95, y: 28 },
+							{ opacity: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.35 },
+							0.25
+						)
+						.fromTo(
+							aboutTextEl,
+							{ opacity: 0, y: 20 },
+							{ opacity: 1, y: 0, ease: 'power2.out', duration: 0.32 },
+							0.28
+						)
+						// 60% – 85%: die Szene bleibt einfach stehen (keine Tweens nötig).
+						// 80% – 100%: Split-Section dockt an, Lena-Szene gleitet weich raus.
+						.to(
+							aboutEl,
+							{ opacity: 0, y: -40, ease: 'power1.in', duration: 0.2 },
+							0.8
+						)
 						.to(
 							curtainEl,
-							{
-								yPercent: 0,
-								ease: 'power2.inOut',
-								duration: 0.65
-							},
-							0.3
+							{ yPercent: 0, ease: 'power2.inOut', duration: 0.2 },
+							0.8
 						)
 						.to(
 							headerEl,
 							{
 								opacity: 1,
-								duration: 0.2,
+								duration: 0.15,
 								ease: 'power1.out',
 								onStart: () => (headerVisible = true),
 								onReverseComplete: () => (headerVisible = false)
 							},
-							0.8
+							0.85
 						);
+
+					if (!isMobile) {
+						flyTl.fromTo(
+							aboutImageEl,
+							{ filter: 'blur(14px)' },
+							{ filter: 'blur(0px)', ease: 'power2.out', duration: 0.35 },
+							0.25
+						);
+					}
 
 					if (splitHeadingEl) {
 						gsap.from(splitHeadingEl, {
@@ -239,6 +271,7 @@
 		<div
 			bind:this={glowEl}
 			aria-hidden="true"
+			style="will-change: transform, opacity;"
 			class="pointer-events-none absolute left-1/2 top-1/2 h-[60vmax] w-[60vmax] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/40 opacity-50 blur-3xl"
 		></div>
 
@@ -247,6 +280,7 @@
 				bind:this={logoEl}
 				src="/logo.jpg"
 				alt="Lena's Garn &amp; Blütentraum"
+				style="will-change: transform, opacity;"
 				class="relative z-10 w-[85vw] max-h-[75vh] object-contain mix-blend-multiply md:h-[80vh] md:w-auto md:max-w-[90vw]"
 			/>
 		</div>
@@ -263,8 +297,47 @@
 		</div>
 
 		<div
+			bind:this={aboutEl}
+			aria-hidden="true"
+			style="will-change: transform, opacity;"
+			class="pointer-events-none absolute inset-0 z-[15] flex flex-col items-center justify-center gap-8 px-6 py-12 sm:px-10 md:flex-row md:gap-16 md:px-16 lg:gap-24"
+		>
+			<div
+				bind:this={aboutImageWrapEl}
+				style="will-change: transform, opacity;"
+				class="relative w-[64vw] max-w-[300px] shrink-0 md:w-[32vw] md:max-w-[380px]"
+			>
+				<div
+					aria-hidden="true"
+					class="absolute -inset-6 -z-10 rounded-[2.5rem] bg-accent/25 blur-3xl"
+				></div>
+				<img
+					bind:this={aboutImageEl}
+					src="/lena.jpg"
+					alt="Portrait von Lena"
+					style="object-position: top center; will-change: filter;"
+					class="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-[0_30px_70px_-25px_rgba(28,29,31,0.4)]"
+				/>
+			</div>
+
+			<div
+				bind:this={aboutTextEl}
+				style="will-change: transform, opacity;"
+				class="max-w-md text-center md:text-left"
+			>
+				<h2 class="font-serif text-3xl text-ink sm:text-4xl">Mit Liebe zum Handwerk</h2>
+				<p class="mt-4 text-base leading-relaxed text-ink/75 sm:text-lg">
+					Wo feine Garne, präzise Schnitte und lebendige Blüten zu unverwechselbaren Momenten
+					verschmelzen. Willkommen in meinem Traum.
+				</p>
+				<span class="mt-6 inline-block font-serif text-2xl italic text-accent">Lena</span>
+			</div>
+		</div>
+
+		<div
 			bind:this={curtainEl}
 			aria-hidden="true"
+			style="will-change: transform;"
 			class="pointer-events-none absolute inset-0 z-20 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
 		></div>
 	</section>
