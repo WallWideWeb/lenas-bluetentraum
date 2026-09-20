@@ -2,8 +2,16 @@
 	let {
 		pathId,
 		dotId,
+		needleId,
+		needleScale = 1,
 		class: className = ''
-	}: { pathId: string; dotId?: string; class?: string } = $props();
+	}: {
+		pathId: string;
+		dotId?: string;
+		needleId?: string;
+		needleScale?: number;
+		class?: string;
+	} = $props();
 </script>
 
 <!--
@@ -29,5 +37,36 @@
 	/>
 	{#if dotId}
 		<circle id={dotId} cx="100" cy="6" r="4" fill="currentColor" opacity="0" />
+	{/if}
+	{#if needleId}
+		<defs>
+			<linearGradient id="{needleId}-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+				<stop offset="0%" stop-color="#E2E8F0" />
+				<stop offset="35%" stop-color="#FFFFFF" />
+				<stop offset="70%" stop-color="#94A3B8" />
+				<stop offset="100%" stop-color="#475569" />
+			</linearGradient>
+		</defs>
+		<g
+			id={needleId}
+			opacity="0"
+			style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+		>
+			<g transform="scale({needleScale})">
+				<path
+					d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z"
+					fill="url(#{needleId}-grad)"
+				/>
+				<ellipse
+					cx="6"
+					cy="0"
+					rx="5"
+					ry="2.6"
+					fill="none"
+					stroke="url(#{needleId}-grad)"
+					stroke-width="1.8"
+				/>
+			</g>
+		</g>
 	{/if}
 </svg>

@@ -115,7 +115,9 @@
 	let aboutTextEl: HTMLDivElement;
 	let heroThreadPathEl: SVGPathElement;
 	let aboutFramePathEl: SVGPathElement;
-	let needleEl: HTMLDivElement;
+	let heroNeedleEl: SVGGElement;
+	let frameNeedleEl: SVGGElement;
+	let ctaNeedleEl: SVGGElement;
 	let curtainEl: HTMLDivElement;
 	let scrollHintEl: HTMLDivElement;
 	let scrollLineEl: HTMLSpanElement;
@@ -142,39 +144,41 @@
 			ctx = gsap.context(() => {
 				const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-				// Positioniert die Nähnadel exakt an der aktiven Spitze eines
-				// beliebigen Faden-Pfads, tangential zur Kurvenrichtung gedreht.
-				// getScreenCTM() macht das unabhängig vom jeweiligen viewBox/
-				// Skalierungs-Setup des einzelnen Pfads (Hero, Karten, Wellen, …).
-				const moveNeedle = (pathEl: SVGPathElement, progress: number) => {
-					if (reduceMotion || !needleEl) return;
-					const len = pathEl.getTotalLength();
-					const drawn = progress * len;
-					if (drawn <= 0.5) {
-						gsap.set(needleEl, { opacity: 0 });
+				// Die Nadel lebt als <g> direkt im selben SVG wie ihr Faden-Pfad,
+				// darum reicht eine reine Lokalkoordinaten-Transformation – kein
+				// Viewport-Umrechnen, also kein Versatz. Nur eine Nadel ist je
+				// Zeitpunkt sichtbar: sobald ein anderer Pfad übernimmt, wird die
+				// vorige ausgeblendet.
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				let activeNeedleEl: SVGGElement | null = null;
+				const moveNeedle = (
+					pathEl: SVGPathElement,
+					progress: number,
+					needleGroupEl?: SVGGElement | null
+				) => {
+					if (reduceMotion || !needleGroupEl) return;
+					const pathLength = pathEl.getTotalLength();
+					const currentLen = pathLength * progress;
+					if (currentLen <= 0.5) {
+						if (needleGroupEl === activeNeedleEl) {
+							gsap.set(needleGroupEl, { opacity: 0 });
+							activeNeedleEl = null;
+						}
 						return;
 					}
-					const svgEl = pathEl.ownerSVGElement;
-					const ctm = svgEl ? pathEl.getScreenCTM() : null;
-					if (!svgEl || !ctm) return;
-					const p1 = pathEl.getPointAtLength(Math.min(drawn, len));
-					const p0 = pathEl.getPointAtLength(Math.max(0, drawn - 1));
-					const sp1 = svgEl.createSVGPoint();
-					sp1.x = p1.x;
-					sp1.y = p1.y;
-					const sp0 = svgEl.createSVGPoint();
-					sp0.x = p0.x;
-					sp0.y = p0.y;
-					const s1 = sp1.matrixTransform(ctm);
-					const s0 = sp0.matrixTransform(ctm);
-					const angle = Math.atan2(s1.y - s0.y, s1.x - s0.x) * (180 / Math.PI);
-					gsap.set(needleEl, { opacity: 1, x: s1.x, y: s1.y, rotation: angle });
+					const p = pathEl.getPointAtLength(currentLen);
+					const pNext = pathEl.getPointAtLength(Math.min(currentLen + 2, pathLength));
+					const angle = Math.atan2(pNext.y - p.y, pNext.x - p.x) * (180 / Math.PI);
+					if (activeNeedleEl && activeNeedleEl !== needleGroupEl) {
+						gsap.set(activeNeedleEl, { opacity: 0 });
+					}
+					activeNeedleEl = needleGroupEl;
+					gsap.set(needleGroupEl, { opacity: 1, x: p.x, y: p.y, rotation: angle });
 				};
 
 				gsap.set(curtainEl, { yPercent: 100 });
 				gsap.set(aboutImageWrapEl, { opacity: 0, scale: 0.95, y: 28 });
 				gsap.set(aboutTextEl, { opacity: 0, y: 20 });
-				gsap.set(needleEl, { xPercent: -90, yPercent: -50, opacity: 0 });
 
 				const heroThreadLen = heroThreadPathEl.getTotalLength();
 				gsap.set(heroThreadPathEl, {
@@ -281,7 +285,7 @@
 							ease: 'none',
 							duration: 0.35,
 							onUpdate: function () {
-								moveNeedle(heroThreadPathEl, this.progress());
+								moveNeedle(heroThreadPathEl, this.progress(), heroNeedleEl);
 							}
 						}, 0.2)
 						.to(
@@ -323,7 +327,7 @@
 							ease: 'none',
 							duration: 0.45,
 							onUpdate: function () {
-								moveNeedle(aboutFramePathEl, this.progress());
+								moveNeedle(aboutFramePathEl, this.progress(), frameNeedleEl);
 							}
 						}, 0.3)
 						// Stille Haltephase bis 75% (keine Tweens nötig).
@@ -397,7 +401,8 @@
 						triggerEl: Element | null,
 						start = 'top bottom',
 						end = 'top 15%',
-						dotEl?: SVGCircleElement | null
+						dotEl?: SVGCircleElement | null,
+						needleGroupEl?: SVGGElement | null
 					) => {
 						if (!pathEl || !triggerEl) return;
 						const len = pathEl.getTotalLength();
@@ -414,7 +419,7 @@
 								ease: 'none',
 								duration: 1,
 								onUpdate: function () {
-									moveNeedle(pathEl, this.progress());
+									moveNeedle(pathEl, this.progress(), needleGroupEl);
 								}
 							},
 							0
@@ -426,7 +431,8 @@
 					};
 
 					// Faden zeichnet im jeweiligen Kartenbereich das Kleid bzw. die Blüte,
-					// mit leuchtendem Glanzpunkt an der fertig gezeichneten Spitze.
+					// mit leuchtendem Glanzpunkt an der fertig gezeichneten Spitze und der
+					// Nadel, die exakt an der Zeichenspitze führt.
 					const prefix = isMobile ? 'mobile' : 'desktop';
 					worlds.forEach((world, i) => {
 						const pathEl = document.getElementById(
@@ -435,7 +441,10 @@
 						const dotEl = document.getElementById(
 							`${prefix}-dot-${world.kicker}`
 						) as SVGCircleElement | null;
-						wireDraw(pathEl, revealTargets[i], undefined, undefined, dotEl);
+						const needleGroupEl = document.getElementById(
+							`${prefix}-needle-${world.kicker}`
+						) as SVGGElement | null;
+						wireDraw(pathEl, revealTargets[i], undefined, undefined, dotEl, needleGroupEl);
 					});
 
 					// Verbindende Wellenlinien zwischen den Stationen, damit der Faden
@@ -444,13 +453,17 @@
 						document.getElementById('wave-synergy') as SVGPathElement | null,
 						synergyEl,
 						'top bottom',
-						'bottom 30%'
+						'bottom 30%',
+						null,
+						document.getElementById('wave-needle-synergy') as SVGGElement | null
 					);
 					wireDraw(
 						document.getElementById('wave-lookbook') as SVGPathElement | null,
 						lookbookEl,
 						'top bottom',
-						'bottom 20%'
+						'bottom 20%',
+						null,
+						document.getElementById('wave-needle-lookbook') as SVGGElement | null
 					);
 
 					// Faden mündet in eine kleine Schleife über dem Anfrage-Bereich,
@@ -460,7 +473,8 @@
 						document.getElementById('cta-loop-path'),
 						undefined,
 						undefined,
-						document.getElementById('cta-loop-dot') as SVGCircleElement | null
+						document.getElementById('cta-loop-dot') as SVGCircleElement | null,
+						ctaNeedleEl
 					);
 				};
 
@@ -494,34 +508,6 @@
 	<span class="font-serif text-sm tracking-wide text-ink sm:text-base">Lena's Garn &amp; Blütentraum</span>
 </header>
 
-<div
-	bind:this={needleEl}
-	aria-hidden="true"
-	style="filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 4px rgba(255, 255, 255, 0.85));"
-	class="pointer-events-none fixed left-0 top-0 z-[45] h-5 w-12"
->
-	<svg viewBox="0 0 48 20" class="h-full w-full overflow-visible">
-		<defs>
-			<linearGradient id="needle-metal" x1="0%" y1="0%" x2="100%" y2="0%">
-				<stop offset="0%" stop-color="#f7f2e7" />
-				<stop offset="45%" stop-color="#d4af37" />
-				<stop offset="100%" stop-color="#fdf9ef" />
-			</linearGradient>
-		</defs>
-		<line
-			x1="6"
-			y1="10"
-			x2="41"
-			y2="10"
-			stroke="url(#needle-metal)"
-			stroke-width="2.4"
-			stroke-linecap="round"
-		/>
-		<ellipse cx="6" cy="10" rx="3.4" ry="1.7" fill="none" stroke="url(#needle-metal)" stroke-width="1.6" />
-		<circle cx="43" cy="10" r="1.3" fill="url(#needle-metal)" />
-	</svg>
-</div>
-
 <main>
 	<section
 		bind:this={heroEl}
@@ -550,6 +536,24 @@
 				vector-effect="non-scaling-stroke"
 				stroke-linecap="round"
 			/>
+			<defs>
+				<linearGradient id="hero-needle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+					<stop offset="0%" stop-color="#E2E8F0" />
+					<stop offset="35%" stop-color="#FFFFFF" />
+					<stop offset="70%" stop-color="#94A3B8" />
+					<stop offset="100%" stop-color="#475569" />
+				</linearGradient>
+			</defs>
+			<g
+				bind:this={heroNeedleEl}
+				opacity="0"
+				style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+			>
+				<g transform="scale(0.6)">
+					<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#hero-needle-grad)" />
+					<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#hero-needle-grad)" stroke-width="1.8" />
+				</g>
+			</g>
 		</svg>
 
 		<div bind:this={logoWrapEl}>
@@ -612,6 +616,24 @@
 						vector-effect="non-scaling-stroke"
 						stroke-linecap="round"
 					/>
+					<defs>
+						<linearGradient id="frame-needle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+							<stop offset="0%" stop-color="#E2E8F0" />
+							<stop offset="35%" stop-color="#FFFFFF" />
+							<stop offset="70%" stop-color="#94A3B8" />
+							<stop offset="100%" stop-color="#475569" />
+						</linearGradient>
+					</defs>
+					<g
+						bind:this={frameNeedleEl}
+						opacity="0"
+						style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+					>
+						<g transform="scale(0.25)">
+							<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#frame-needle-grad)" />
+							<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#frame-needle-grad)" stroke-width="1.8" />
+						</g>
+					</g>
 				</svg>
 			</div>
 
@@ -662,12 +684,16 @@
 						<ThreadDress
 							pathId="mobile-thread-Atelier"
 							dotId="mobile-dot-Atelier"
+							needleId="mobile-needle-Atelier"
+							needleScale={1.7}
 							class="pointer-events-none absolute right-2 top-2 z-20 h-44 w-28 text-thread"
 						/>
 					{:else}
 						<ThreadFlower
 							pathId="mobile-thread-Floristik"
 							dotId="mobile-dot-Floristik"
+							needleId="mobile-needle-Floristik"
+							needleScale={1.7}
 							class="pointer-events-none absolute right-2 top-2 z-20 h-44 w-28 text-champagne"
 						/>
 					{/if}
@@ -697,12 +723,16 @@
 						<ThreadDress
 							pathId="desktop-thread-Atelier"
 							dotId="desktop-dot-Atelier"
+							needleId="desktop-needle-Atelier"
+							needleScale={1.1}
 							class="pointer-events-none absolute right-6 top-6 z-20 h-64 w-44 text-thread lg:h-72 lg:w-48"
 						/>
 					{:else}
 						<ThreadFlower
 							pathId="desktop-thread-Floristik"
 							dotId="desktop-dot-Floristik"
+							needleId="desktop-needle-Floristik"
+							needleScale={1.1}
 							class="pointer-events-none absolute right-6 top-6 z-20 h-64 w-44 text-champagne lg:h-72 lg:w-48"
 						/>
 					{/if}
@@ -723,6 +753,8 @@
 	<section bind:this={synergyEl} class="relative overflow-hidden bg-background px-6 py-20 sm:px-10 sm:py-28">
 		<ThreadWave
 			pathId="wave-synergy"
+			needleId="wave-needle-synergy"
+			needleScale={0.65}
 			class="pointer-events-none absolute inset-y-0 left-2 z-10 w-10 text-thread sm:left-6 sm:w-14"
 		/>
 
@@ -749,6 +781,8 @@
 	<section bind:this={lookbookEl} class="relative overflow-hidden bg-nude/10 py-20 sm:py-28">
 		<ThreadWave
 			pathId="wave-lookbook"
+			needleId="wave-needle-lookbook"
+			needleScale={0.65}
 			class="pointer-events-none absolute inset-y-0 right-2 z-10 w-10 text-champagne sm:right-6 sm:w-14"
 		/>
 
@@ -821,6 +855,24 @@
 				stroke-linejoin="round"
 			/>
 			<circle id="cta-loop-dot" cx="60" cy="52" r="4" fill="currentColor" opacity="0" />
+			<defs>
+				<linearGradient id="cta-needle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+					<stop offset="0%" stop-color="#E2E8F0" />
+					<stop offset="35%" stop-color="#FFFFFF" />
+					<stop offset="70%" stop-color="#94A3B8" />
+					<stop offset="100%" stop-color="#475569" />
+				</linearGradient>
+			</defs>
+			<g
+				bind:this={ctaNeedleEl}
+				opacity="0"
+				style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));"
+			>
+				<g transform="scale(1)">
+					<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#cta-needle-grad)" />
+					<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#cta-needle-grad)" stroke-width="1.8" />
+				</g>
+			</g>
 		</svg>
 
 		<div
