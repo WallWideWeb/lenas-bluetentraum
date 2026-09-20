@@ -17,7 +17,7 @@
 			title: 'Atelier & Garn',
 			description: 'Schneiderei, Maßanfertigungen und Handwerk mit Liebe zum Detail.',
 			image:
-				'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=1200&q=80',
+				'https://images.unsplash.com/photo-1524404794194-16bae22718c0?auto=format&fit=crop&w=1200&q=80',
 			href: '/atelier-garn'
 		},
 		{
@@ -25,7 +25,7 @@
 			title: 'Floristik & Blüten',
 			description: 'Hochzeitsfloristik, Eventdekoration und zeitlose Trockenblumen.',
 			image:
-				'https://images.unsplash.com/photo-1487530811176-3780de880c2d?auto=format&fit=crop&w=1200&q=80',
+				'https://images.unsplash.com/photo-1759271493994-f8f80d967aa9?auto=format&fit=crop&w=1200&q=80',
 			href: '/floristik-blueten'
 		}
 	];
@@ -307,50 +307,54 @@
 						return;
 					}
 
-					// Pin-Distanz deutlich verlängert (vorher +=40%): die Animation
-					// läuft jetzt über eine viel längere Scroll-Strecke und wirkt
-					// dadurch spürbar sanfter und eleganter.
+					// Pin-Distanz auf ein sanftes Mittelmaß eingependelt (vorher
+					// +=300%, davor +=40%): schnell genug, um nicht zäh zu wirken,
+					// aber lang genug für einen ruhigen, eleganten Ablauf.
 					//
-					// Wichtig gegen toten Scroll-Raum: GSAP reserviert für ein
-					// gepinntes Element standardmäßig einen Spacer in Höhe von
-					// (Elementhöhe + Pin-Distanz). Wäre heroEl selbst 100svh hoch,
-					// müsste man nach dem Lösen des Pins zusätzlich noch eine volle
-					// Bildschirmhöhe "leer" weiterscrollen, bevor "Zwei Welten"
-					// erscheint. Deshalb ist heroEl selbst nur noch ein winziges
-					// (h-px) Trigger-Element; die eigentliche, 100svh hohe visuelle
-					// Szene lebt in einem absolut positionierten Innen-Wrapper
-					// (heroSceneEl) direkt darunter. So bleibt der Spacer nur so groß
-					// wie die Pin-Distanz selbst, und "Zwei Welten" schließt exakt in
-					// dem Moment an, in dem sich das Pin löst.
+					// Gegen toten Scroll-Raum: GSAP reserviert für ein gepinntes
+					// Element standardmäßig einen Spacer in Höhe von (Elementhöhe +
+					// Pin-Distanz). Wäre heroEl selbst 100svh hoch, müsste man nach
+					// dem Lösen des Pins zusätzlich noch eine volle Bildschirmhöhe
+					// "leer" weiterscrollen, bevor "Zwei Welten" erscheint. Deshalb
+					// ist heroEl selbst nur ein winziges (h-px) Trigger-Element; die
+					// eigentliche, 100svh hohe visuelle Szene lebt in einem absolut
+					// positionierten Innen-Wrapper direkt darunter. So bleibt der
+					// Spacer nur so groß wie die Pin-Distanz selbst, und "Zwei
+					// Welten" schließt exakt in dem Moment an, in dem sich das Pin
+					// löst – ohne toten Zwischenraum.
 					//
-					// Sobald "Zwei Welten" in den letzten Scroll-Pixeln des Pins in
-					// den Viewport hineinragt, würde es den noch aktiv gepinnten Hero
-					// optisch überdecken (spätere DOM-Position gewinnt sonst gegen ein
-					// fixiertes, aber z-index:auto Element). Der z-index wird daher
-					// nicht auf heroEl selbst gesetzt – GSAP überschreibt dessen Inline-
-					// Styles laufend bei jedem Pin-Update –, sondern auf den von GSAP
-					// erzeugten Pin-Spacer-Wrapper, den GSAP nicht fortlaufend
-					// neu beschreibt. Nur während das Pin aktiv ist, liegt er oben;
-					// danach fällt er sofort zurück, damit "Zwei Welten" ohne
-					// Verzögerung sichtbar wird.
+					// Gegen die Überschneidung: Solange "Zwei Welten" in den letzten
+					// Scroll-Pixeln des Pins schon in den Viewport hineinragt, würde
+					// es den noch aktiv gepinnten (aber z-index:auto) Hero trotz
+					// position:fixed optisch überdecken, weil spätere DOM-Position
+					// sonst gewinnt. Ein einfacher, permanenter z-20 auf heroEl (statt
+					// einer von GSAP bei jedem Pin-Update wieder überschriebenen
+					// Inline-Style) löst das robust: Während das Pin aktiv ist, liegt
+					// Hero (fixed) dank z-20 zuverlässig über "Zwei Welten"; sobald es
+					// sich löst, kehrt heroEl an seine winzige, längst hinter dem
+					// aktuellen Scroll liegende Ursprungsposition zurück und
+					// überschneidet nichts mehr – der z-20 bleibt dann folgenlos.
 					const flyTl = gsap.timeline({
 						scrollTrigger: {
 							trigger: heroEl,
 							start: 'top top',
-							end: '+=300%',
+							end: '+=160%',
 							pin: true,
 							scrub: 1,
 							anticipatePin: 1,
-							// onUpdate statt onToggle: ScrollTrigger.refresh()-Läufe
-							// (z. B. durch spät ladende Bilder weiter unten auf der
-							// Seite) überschreiben den z-index sonst wieder mit "auto".
-							// onUpdate feuert bei jedem Scroll-Tick erneut und stellt
-							// den korrekten Wert so laufend selbst wieder her.
+							// Da Lenis den Scroll per Transform simuliert, pinnt GSAP
+							// heroEl ebenfalls per Transform statt position:fixed. Beim
+							// Lösen des Pins hält GSAP diesen Transform-Wert (zusammen
+							// mit Lenis' eigenem, fortlaufenden ScrollTrigger.update())
+							// hartnäckig aufrecht, statt ihn einmalig zurückzusetzen –
+							// heroEl (und die absolut positionierte Szene darin) bliebe
+							// sichtbar am letzten Scroll "kleben" und würde "Zwei
+							// Welten" weiter verdecken. onUpdate feuert bei jedem
+							// Scroll-Tick erneut und stellt den korrekten Zustand daher
+							// laufend selbst wieder her, statt sich einmalig
+							// überschreiben zu lassen.
 							onUpdate: (self) => {
-								gsap.set(heroEl.parentElement, { zIndex: self.isActive ? 20 : 0 });
-							},
-							onRefresh: (self) => {
-								gsap.set(heroEl.parentElement, { zIndex: self.isActive ? 20 : 0 });
+								if (!self.isActive) gsap.set(heroEl, { clearProps: 'transform' });
 							}
 						},
 						onStart: () => {
@@ -424,38 +428,39 @@
 						.to(aboutFramePathEl, {
 							strokeDashoffset: 0,
 							ease: 'none',
-							duration: 0.38,
+							duration: 0.45,
 							onUpdate: function () {
 								moveNeedle(aboutFramePathEl, this.progress(), frameNeedleEl);
 							}
 						}, 0.3)
-						// Lena bleibt bis 68% ausführlich lesbar im Bild (der lange
-						// Rahmen-Zeichenvorgang ist selbst die Lesepause).
-						// Phase 3 (68% – 100%): Split-Section dockt an, Lena-Szene
-						// gleitet raus und der Vorhang fährt hoch – bewusst über den
-						// vollen restlichen Timeline-Bereich gestreckt, damit exakt bei
-						// Progress 1 (= Ende der Pin-Distanz) alles fertig ist und
-						// nichts einfriert, bevor "Zwei Welten" anschließt.
+						// Lena bleibt bis 75% voll im Fokus, unangetastet lesbar im
+						// Bild (der lange Rahmen-Zeichenvorgang ist selbst die
+						// Lesepause und endet exakt hier).
+						// Phase 3 (75% – 100%): Erst jetzt fadet Lenas Bereich weich
+						// aus, während der Vorhang hochfährt – gestreckt über den
+						// gesamten restlichen Timeline-Bereich, damit exakt bei
+						// Progress 1 (= Ende der Pin-Distanz) alles abgeschlossen ist
+						// und "Zwei Welten" bündig, ohne Überschneidung, anschließt.
 						.to(
 							aboutEl,
-							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.3 },
-							0.68
+							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.25 },
+							0.75
 						)
 						.to(
 							curtainEl,
-							{ yPercent: 0, ease: 'power2.inOut', duration: 0.3 },
-							0.68
+							{ yPercent: 0, ease: 'power2.inOut', duration: 0.25 },
+							0.75
 						)
 						.to(
 							headerEl,
 							{
 								opacity: 1,
-								duration: 0.08,
+								duration: 0.07,
 								ease: 'power1.out',
 								onStart: () => (headerVisible = true),
 								onReverseComplete: () => (headerVisible = false)
 							},
-							0.9
+							0.93
 						);
 
 					if (!isMobile) {
@@ -663,7 +668,7 @@
 </header>
 
 <main class="bg-mist">
-	<section bind:this={heroEl} id="hero" class="relative h-px w-full">
+	<section bind:this={heroEl} id="hero" class="relative z-20 h-px w-full">
 	<div
 		class="absolute inset-x-0 top-0 flex h-svh min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-mist"
 	>
@@ -831,7 +836,7 @@
 						src={world.image}
 						alt=""
 						loading="lazy"
-						class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-active:scale-105"
+						class="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-700 group-active:scale-105"
 					/>
 					<div class="absolute inset-0 bg-linear-to-t from-ink/80 via-ink/20 to-transparent"></div>
 					{#if world.kicker === 'Atelier'}
@@ -871,7 +876,7 @@
 					href={world.href}
 					class="split-panel group relative flex-1 overflow-hidden"
 				>
-					<img src={world.image} alt="" loading="lazy" class="split-img absolute inset-0 h-full w-full object-cover" />
+					<img src={world.image} alt="" loading="lazy" class="split-img absolute inset-0 h-full w-full object-cover object-top" />
 					<div class="absolute inset-0 bg-linear-to-t from-ink/70 via-ink/10 to-transparent"></div>
 					{#if world.kicker === 'Atelier'}
 						<ThreadDress
