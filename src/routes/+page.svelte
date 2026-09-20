@@ -26,6 +26,78 @@
 		}
 	];
 
+	const synergyPoints = [
+		{
+			title: 'Harmonische Farbkonzepte',
+			description:
+				'Garne und Blüten werden aufeinander abgestimmt, damit Kleidung und Dekoration eine gemeinsame Sprache sprechen.'
+		},
+		{
+			title: 'Alles aus einer Hand',
+			description:
+				'Von der Maßanfertigung bis zum Brautstrauß – ein Ansprechpartner begleitet Ihr Projekt von Anfang bis Ende.'
+		},
+		{
+			title: 'Liebe zum kleinsten Detail',
+			description:
+				'Jeder Saum, jede Blüte wird mit derselben Sorgfalt gefertigt – für Momente, die man fühlt statt nur sieht.'
+		}
+	];
+
+	type LookbookItem = { badge: string; image: string; alt: string };
+	const lookbook: LookbookItem[] = [
+		{
+			badge: 'Atelier',
+			image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=900&q=80',
+			alt: 'Handgestrickte Wollwaren in warmen Tönen'
+		},
+		{
+			badge: 'Floristik',
+			image: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?auto=format&fit=crop&w=900&q=80',
+			alt: 'Üppiger Hochzeitsstrauß mit Rosen'
+		},
+		{
+			badge: 'Atelier',
+			image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=900&q=80',
+			alt: 'Kuratierte Kleidungsstücke im Atelier'
+		},
+		{
+			badge: 'Floristik',
+			image: 'https://images.unsplash.com/photo-1487070183336-b863922373d4?auto=format&fit=crop&w=900&q=80',
+			alt: 'Blumenstand mit frischen Sträußen'
+		},
+		{
+			badge: 'Atelier',
+			image: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=900&q=80',
+			alt: 'Farbenfrohe Stoffe auf dem Kleiderbügel'
+		},
+		{
+			badge: 'Floristik',
+			image: 'https://images.unsplash.com/photo-1519378058457-4c29a0a2efac?auto=format&fit=crop&w=900&q=80',
+			alt: 'Nahaufnahme leuchtend roter Blüten'
+		}
+	];
+
+	let lookbookScrollEl: HTMLDivElement;
+	function scrollLookbook(direction: 1 | -1) {
+		if (!lookbookScrollEl) return;
+		lookbookScrollEl.scrollBy({ left: lookbookScrollEl.clientWidth * 0.8 * direction, behavior: 'smooth' });
+	}
+
+	const interests = ['Braut & Hochzeit', 'Maßanfertigung', 'Florales Design'] as const;
+	let selectedInterest: (typeof interests)[number] = $state(interests[0]);
+
+	const phoneDisplay = '+49 151 46159350';
+	const phoneHref = 'tel:+4915146159350';
+	const email = 'info@lenas-bluetentraum.de';
+	const address = 'Schulstraße 28, 57636 Mammelzen';
+	const hours = 'Täglich 8:00–18:00 Uhr und nach Vereinbarung';
+	const whatsappHref = $derived(
+		`https://wa.me/4915146159350?text=${encodeURIComponent(`Hallo Lena, ich interessiere mich für: ${selectedInterest}`)}`
+	);
+	const emailHref = $derived(`mailto:${email}?subject=${encodeURIComponent(`Anfrage: ${selectedInterest}`)}`);
+	const currentYear = new Date().getFullYear();
+
 	let headerVisible = $state(false);
 
 	let headerEl: HTMLElement;
@@ -141,16 +213,16 @@
 					});
 
 					flyTl
-						// 0% – 40%: Logo + Glow fliegen weg, kein Leerlauf danach.
-						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.05, ease: 'none' }, 0)
+						// Phase 1 (0% – 35%): Logo + Glow fliegen cineastisch weg.
+						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.04, ease: 'none' }, 0)
 						.to(
 							logoEl,
 							{
 								scale: isMobile ? 2.2 : 2.6,
-								yPercent: -120,
+								yPercent: -130,
 								opacity: 0,
 								ease: 'power1.in',
-								duration: 0.38
+								duration: 0.33
 							},
 							0.02
 						)
@@ -160,11 +232,11 @@
 								scale: isMobile ? 2.4 : 3.2,
 								opacity: 0,
 								ease: 'none',
-								duration: 0.4
+								duration: 0.35
 							},
 							0
 						)
-						// 25% – 60%: "Über Lena"-Szene blendet synchron ein.
+						// Phase 2 (25% – 60%): "Über Lena"-Szene blendet synchron ein.
 						.fromTo(
 							aboutImageWrapEl,
 							{ opacity: 0, scale: 0.95, y: 28 },
@@ -177,17 +249,18 @@
 							{ opacity: 1, y: 0, ease: 'power2.out', duration: 0.32 },
 							0.28
 						)
-						// 60% – 85%: die Szene bleibt einfach stehen (keine Tweens nötig).
-						// 80% – 100%: Split-Section dockt an, Lena-Szene gleitet weich raus.
+						// Stille Haltephase bis 60% (keine Tweens nötig).
+						// Phase 3 (60% – 100%): Split-Section dockt an, Lena-Szene gleitet
+						// weich raus – über die volle Distanz, damit nie leerer Hintergrund steht.
 						.to(
 							aboutEl,
-							{ opacity: 0, y: -40, ease: 'power1.in', duration: 0.2 },
-							0.8
+							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.4 },
+							0.6
 						)
 						.to(
 							curtainEl,
-							{ yPercent: 0, ease: 'power2.inOut', duration: 0.2 },
-							0.8
+							{ yPercent: 0, ease: 'power2.inOut', duration: 0.4 },
+							0.6
 						)
 						.to(
 							headerEl,
@@ -253,6 +326,14 @@
 	});
 </script>
 
+<svelte:head>
+	<title>Lena's Garn &amp; Blütentraum</title>
+	<meta
+		name="description"
+		content="Schneiderei und Floristik aus einer Hand: Maßanfertigungen, Hochzeitsfloristik und Trockenblumen aus Mammelzen."
+	/>
+</svelte:head>
+
 <header
 	bind:this={headerEl}
 	aria-hidden={!headerVisible}
@@ -316,7 +397,7 @@
 					src="/lena.jpg"
 					alt="Portrait von Lena"
 					style="object-position: top center; will-change: filter;"
-					class="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-[0_30px_70px_-25px_rgba(28,29,31,0.4)]"
+					class="aspect-[4/5] w-full rounded-[3rem_1.25rem_3rem_1.25rem] object-cover shadow-[0_35px_70px_-25px_rgba(180,130,95,0.45)]"
 				/>
 			</div>
 
@@ -325,12 +406,11 @@
 				style="will-change: transform, opacity;"
 				class="max-w-md text-center md:text-left"
 			>
-				<h2 class="font-serif text-3xl text-ink sm:text-4xl">Mit Liebe zum Handwerk</h2>
+				<h2 class="font-serif text-3xl text-ink sm:text-4xl">Handwerk mit Seele</h2>
 				<p class="mt-4 text-base leading-relaxed text-ink/75 sm:text-lg">
-					Wo feine Garne, präzise Schnitte und lebendige Blüten zu unverwechselbaren Momenten
-					verschmelzen. Willkommen in meinem Traum.
+					„Wo feine Garne und lebendige Blüten zu einer gemeinsamen Geschichte verschmelzen.“
 				</p>
-				<span class="mt-6 inline-block font-serif text-2xl italic text-accent">Lena</span>
+				<span class="mt-6 inline-block font-serif text-2xl italic text-accent">— Lena</span>
 			</div>
 		</div>
 
@@ -399,6 +479,174 @@
 			{/each}
 		</div>
 	</section>
+
+	<section class="bg-background px-6 py-20 sm:px-10 sm:py-28">
+		<div class="mx-auto max-w-5xl text-center">
+			<span class="text-xs uppercase tracking-[0.35em] text-accent">Warum beides zusammengehört</span>
+			<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Das Synergie-Prinzip</h2>
+		</div>
+
+		<div class="mx-auto mt-14 grid max-w-5xl gap-10 sm:grid-cols-3">
+			{#each synergyPoints as point, i}
+				<div class="text-center">
+					<span
+						class="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-accent/30 font-serif text-lg text-accent"
+					>
+						{i + 1}
+					</span>
+					<h3 class="mt-5 font-serif text-xl text-ink">{point.title}</h3>
+					<p class="mt-3 text-sm leading-relaxed text-ink/70">{point.description}</p>
+				</div>
+			{/each}
+		</div>
+	</section>
+
+	<section class="bg-nude/10 py-20 sm:py-28">
+		<div class="mx-auto flex max-w-6xl items-end justify-between gap-6 px-6 sm:px-10">
+			<div>
+				<span class="text-xs uppercase tracking-[0.35em] text-accent">Lookbook</span>
+				<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Ein Blick in unsere Welt</h2>
+			</div>
+			<div class="hidden shrink-0 gap-3 sm:flex">
+				<button
+					type="button"
+					aria-label="Zurück"
+					onclick={() => scrollLookbook(-1)}
+					class="flex h-11 w-11 items-center justify-center rounded-full border border-ink/15 text-ink transition-colors hover:bg-ink hover:text-background"
+				>
+					←
+				</button>
+				<button
+					type="button"
+					aria-label="Weiter"
+					onclick={() => scrollLookbook(1)}
+					class="flex h-11 w-11 items-center justify-center rounded-full border border-ink/15 text-ink transition-colors hover:bg-ink hover:text-background"
+				>
+					→
+				</button>
+			</div>
+		</div>
+
+		<div
+			bind:this={lookbookScrollEl}
+			class="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pb-4 sm:px-10 [&::-webkit-scrollbar]:hidden"
+			style="scrollbar-width: none;"
+		>
+			{#each lookbook as item}
+				<div
+					class="group relative aspect-4/5 w-[75vw] max-w-[320px] shrink-0 snap-start overflow-hidden rounded-2xl sm:w-[320px]"
+				>
+					<img
+						src={item.image}
+						alt={item.alt}
+						loading="lazy"
+						class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+					/>
+					<div class="absolute inset-0 bg-linear-to-t from-ink/50 via-transparent to-transparent"></div>
+					<span
+						class="absolute left-4 top-4 rounded-full bg-background/85 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-ink backdrop-blur-sm"
+					>
+						{item.badge}
+					</span>
+				</div>
+			{/each}
+		</div>
+	</section>
+
+	<section class="relative overflow-hidden bg-linear-to-b from-accent/10 via-background to-background px-6 py-20 sm:px-10 sm:py-28">
+		<div
+			class="mx-auto max-w-2xl rounded-[2.5rem] border border-white/40 bg-background/60 p-8 text-center shadow-[0_40px_80px_-40px_rgba(28,29,31,0.35)] backdrop-blur-xl sm:p-14"
+		>
+			<span class="text-xs uppercase tracking-[0.35em] text-accent">Termin &amp; Anfrage</span>
+			<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Lass uns deine Idee verwirklichen.</h2>
+			<p class="mt-4 text-sm text-ink/70 sm:text-base">
+				Wähle, worum es geht – dann melden wir uns über den passenden Kontaktweg.
+			</p>
+
+			<div class="mt-8 flex flex-wrap justify-center gap-3">
+				{#each interests as interest}
+					<button
+						type="button"
+						onclick={() => (selectedInterest = interest)}
+						aria-pressed={selectedInterest === interest}
+						class="rounded-full border px-5 py-2 text-sm font-medium transition-colors {selectedInterest ===
+						interest
+							? 'border-accent bg-accent text-background'
+							: 'border-ink/15 text-ink hover:border-accent/40'}"
+					>
+						{interest}
+					</button>
+				{/each}
+			</div>
+
+			<div class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+				<a
+					href={whatsappHref}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-accent-light"
+				>
+					WhatsApp schreiben
+				</a>
+				<a
+					href={emailHref}
+					class="inline-flex items-center gap-2 rounded-full border border-ink/20 px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-background"
+				>
+					Per E-Mail anfragen
+				</a>
+			</div>
+
+			<p class="mt-5 text-sm text-ink/60">
+				Oder direkt anrufen: <a href={phoneHref} class="font-medium text-ink hover:text-accent">{phoneDisplay}</a>
+			</p>
+		</div>
+	</section>
+
+	<footer class="border-t border-ink/10 bg-ink text-background">
+		<div class="mx-auto grid max-w-6xl gap-12 px-6 py-16 sm:grid-cols-3 sm:px-10">
+			<div>
+				<div class="flex items-center gap-3">
+					<span class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-background p-1">
+						<img src="/logo.jpg" alt="" class="h-full w-full rounded-full object-cover" />
+					</span>
+					<span class="font-serif text-lg tracking-wide">Lena's Garn &amp; Blütentraum</span>
+				</div>
+				<p class="mt-4 text-sm text-background/70">
+					Schneiderei und Floristik aus einer Hand – mit Liebe zum Handwerk aus Mammelzen.
+				</p>
+				<a
+					href="https://instagram.com"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="mt-5 inline-flex items-center gap-2 text-sm text-background/70 transition-colors hover:text-background"
+				>
+					Instagram
+				</a>
+			</div>
+
+			<div>
+				<h3 class="text-xs uppercase tracking-[0.3em] text-background/50">Kontakt</h3>
+				<ul class="mt-4 space-y-2 text-sm text-background/80">
+					<li>{address}</li>
+					<li><a href={phoneHref} class="hover:text-background">{phoneDisplay}</a></li>
+					<li><a href="mailto:{email}" class="hover:text-background">{email}</a></li>
+				</ul>
+			</div>
+
+			<div>
+				<h3 class="text-xs uppercase tracking-[0.3em] text-background/50">Atelierzeiten</h3>
+				<p class="mt-4 text-sm text-background/80">{hours}</p>
+				<div class="mt-6 flex gap-4 text-sm text-background/60">
+					<a href="/impressum" class="hover:text-background">Impressum</a>
+					<a href="/datenschutz" class="hover:text-background">Datenschutz</a>
+				</div>
+			</div>
+		</div>
+
+		<div class="border-t border-background/10 px-6 py-6 text-center text-xs text-background/40 sm:px-10">
+			© {currentYear} Lena's Garn &amp; Blütentraum
+		</div>
+	</footer>
 </main>
 
 <style>
