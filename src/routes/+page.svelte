@@ -115,6 +115,7 @@
 	let aboutTextEl: HTMLDivElement;
 	let heroThreadPathEl: SVGPathElement;
 	let aboutFramePathEl: SVGPathElement;
+	let needleEl: HTMLDivElement;
 	let curtainEl: HTMLDivElement;
 	let scrollHintEl: HTMLDivElement;
 	let scrollLineEl: HTMLSpanElement;
@@ -141,9 +142,39 @@
 			ctx = gsap.context(() => {
 				const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+				// Positioniert die Nähnadel exakt an der aktiven Spitze eines
+				// beliebigen Faden-Pfads, tangential zur Kurvenrichtung gedreht.
+				// getScreenCTM() macht das unabhängig vom jeweiligen viewBox/
+				// Skalierungs-Setup des einzelnen Pfads (Hero, Karten, Wellen, …).
+				const moveNeedle = (pathEl: SVGPathElement, progress: number) => {
+					if (reduceMotion || !needleEl) return;
+					const len = pathEl.getTotalLength();
+					const drawn = progress * len;
+					if (drawn <= 0.5) {
+						gsap.set(needleEl, { opacity: 0 });
+						return;
+					}
+					const svgEl = pathEl.ownerSVGElement;
+					const ctm = svgEl ? pathEl.getScreenCTM() : null;
+					if (!svgEl || !ctm) return;
+					const p1 = pathEl.getPointAtLength(Math.min(drawn, len));
+					const p0 = pathEl.getPointAtLength(Math.max(0, drawn - 1));
+					const sp1 = svgEl.createSVGPoint();
+					sp1.x = p1.x;
+					sp1.y = p1.y;
+					const sp0 = svgEl.createSVGPoint();
+					sp0.x = p0.x;
+					sp0.y = p0.y;
+					const s1 = sp1.matrixTransform(ctm);
+					const s0 = sp0.matrixTransform(ctm);
+					const angle = Math.atan2(s1.y - s0.y, s1.x - s0.x) * (180 / Math.PI);
+					gsap.set(needleEl, { opacity: 1, x: s1.x, y: s1.y, rotation: angle });
+				};
+
 				gsap.set(curtainEl, { yPercent: 100 });
 				gsap.set(aboutImageWrapEl, { opacity: 0, scale: 0.95, y: 28 });
 				gsap.set(aboutTextEl, { opacity: 0, y: 20 });
+				gsap.set(needleEl, { xPercent: -90, yPercent: -50, opacity: 0 });
 
 				const heroThreadLen = heroThreadPathEl.getTotalLength();
 				gsap.set(heroThreadPathEl, {
@@ -214,11 +245,16 @@
 						return;
 					}
 
+					// Pin-Distanz gestrafft (vorher +=75%): Lenas Reveal behält sein
+					// bisheriges Lesetempo (Phasen 1+2 enden weiterhin bei ~45% der
+					// Heldenhöhe), aber die Übergangsphase danach – Vorhang hoch,
+					// Lena raus, Split-Section andocken – ist jetzt nur noch halb so
+					// lang, damit kein toter Raum nach Lenas Bereich entsteht.
 					const flyTl = gsap.timeline({
 						scrollTrigger: {
 							trigger: heroEl,
 							start: 'top top',
-							end: '+=75%',
+							end: '+=60%',
 							pin: true,
 							scrub: 1,
 							anticipatePin: 1
@@ -230,17 +266,24 @@
 					});
 
 					flyTl
-						// Phase 1 (0% – 35%): Logo + Glow fliegen cineastisch weg.
-						// Der Faden bleibt bis ~17% Scroll-Fortschritt unsichtbar und
+						// Phase 1 (0% – 45%): Logo + Glow fliegen cineastisch weg.
+						// Der Faden bleibt bis ~20% Scroll-Fortschritt unsichtbar und
 						// löst sich erst dann sichtbar vom Logo, um nach unten zu wachsen.
-						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.04, ease: 'none' }, 0)
+						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.05, ease: 'none' }, 0)
 						.fromTo(
 							heroThreadPathEl,
 							{ opacity: 0 },
 							{ opacity: 1, ease: 'none', duration: 0.05 },
-							0.17
+							0.2
 						)
-						.to(heroThreadPathEl, { strokeDashoffset: 0, ease: 'none', duration: 0.28 }, 0.17)
+						.to(heroThreadPathEl, {
+							strokeDashoffset: 0,
+							ease: 'none',
+							duration: 0.35,
+							onUpdate: function () {
+								moveNeedle(heroThreadPathEl, this.progress());
+							}
+						}, 0.2)
 						.to(
 							logoEl,
 							{
@@ -248,9 +291,9 @@
 								yPercent: -130,
 								opacity: 0,
 								ease: 'power1.in',
-								duration: 0.33
+								duration: 0.42
 							},
-							0.02
+							0.03
 						)
 						.to(
 							glowEl,
@@ -258,47 +301,54 @@
 								scale: isMobile ? 2.4 : 3.2,
 								opacity: 0,
 								ease: 'none',
-								duration: 0.35
+								duration: 0.45
 							},
 							0
 						)
-						// Phase 2 (25% – 60%): "Über Lena"-Szene blendet synchron ein.
+						// Phase 2 (30% – 75%): "Über Lena"-Szene blendet synchron ein.
 						.fromTo(
 							aboutImageWrapEl,
 							{ opacity: 0, scale: 0.95, y: 28 },
-							{ opacity: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.35 },
-							0.25
+							{ opacity: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.45 },
+							0.3
 						)
 						.fromTo(
 							aboutTextEl,
 							{ opacity: 0, y: 20 },
-							{ opacity: 1, y: 0, ease: 'power2.out', duration: 0.32 },
-							0.28
+							{ opacity: 1, y: 0, ease: 'power2.out', duration: 0.42 },
+							0.33
 						)
-						.to(aboutFramePathEl, { strokeDashoffset: 0, ease: 'none', duration: 0.35 }, 0.25)
-						// Stille Haltephase bis 60% (keine Tweens nötig).
-						// Phase 3 (60% – 100%): Split-Section dockt an, Lena-Szene gleitet
-						// weich raus – über die volle Distanz, damit nie leerer Hintergrund steht.
+						.to(aboutFramePathEl, {
+							strokeDashoffset: 0,
+							ease: 'none',
+							duration: 0.45,
+							onUpdate: function () {
+								moveNeedle(aboutFramePathEl, this.progress());
+							}
+						}, 0.3)
+						// Stille Haltephase bis 75% (keine Tweens nötig).
+						// Phase 3 (75% – 100%): Split-Section dockt an, Lena-Szene gleitet
+						// weich raus – kompakt, damit unmittelbar nach Lena weiterlesbar ist.
 						.to(
 							aboutEl,
-							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.4 },
-							0.6
+							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.25 },
+							0.75
 						)
 						.to(
 							curtainEl,
-							{ yPercent: 0, ease: 'power2.inOut', duration: 0.4 },
-							0.6
+							{ yPercent: 0, ease: 'power2.inOut', duration: 0.25 },
+							0.75
 						)
 						.to(
 							headerEl,
 							{
 								opacity: 1,
-								duration: 0.15,
+								duration: 0.1,
 								ease: 'power1.out',
 								onStart: () => (headerVisible = true),
 								onReverseComplete: () => (headerVisible = false)
 							},
-							0.85
+							0.9
 						);
 
 					if (!isMobile) {
@@ -357,7 +407,18 @@
 						const tl = gsap.timeline({
 							scrollTrigger: { trigger: triggerEl, start, end, scrub: 1.5 }
 						});
-						tl.to(pathEl, { strokeDashoffset: 0, ease: 'none', duration: 1 }, 0);
+						tl.to(
+							pathEl,
+							{
+								strokeDashoffset: 0,
+								ease: 'none',
+								duration: 1,
+								onUpdate: function () {
+									moveNeedle(pathEl, this.progress());
+								}
+							},
+							0
+						);
 						if (dotEl) {
 							// Der Glanzpunkt leuchtet erst auf, sobald die Linie fast fertig gezeichnet ist.
 							tl.to(dotEl, { opacity: 1, scale: 1, ease: 'power1.out', duration: 0.25 }, 0.8);
@@ -432,6 +493,34 @@
 	<img src="/logo.jpg" alt="" class="h-8 w-auto" />
 	<span class="font-serif text-sm tracking-wide text-ink sm:text-base">Lena's Garn &amp; Blütentraum</span>
 </header>
+
+<div
+	bind:this={needleEl}
+	aria-hidden="true"
+	style="filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 4px rgba(255, 255, 255, 0.85));"
+	class="pointer-events-none fixed left-0 top-0 z-[45] h-5 w-12"
+>
+	<svg viewBox="0 0 48 20" class="h-full w-full overflow-visible">
+		<defs>
+			<linearGradient id="needle-metal" x1="0%" y1="0%" x2="100%" y2="0%">
+				<stop offset="0%" stop-color="#f7f2e7" />
+				<stop offset="45%" stop-color="#d4af37" />
+				<stop offset="100%" stop-color="#fdf9ef" />
+			</linearGradient>
+		</defs>
+		<line
+			x1="6"
+			y1="10"
+			x2="41"
+			y2="10"
+			stroke="url(#needle-metal)"
+			stroke-width="2.4"
+			stroke-linecap="round"
+		/>
+		<ellipse cx="6" cy="10" rx="3.4" ry="1.7" fill="none" stroke="url(#needle-metal)" stroke-width="1.6" />
+		<circle cx="43" cy="10" r="1.3" fill="url(#needle-metal)" />
+	</svg>
+</div>
 
 <main>
 	<section
