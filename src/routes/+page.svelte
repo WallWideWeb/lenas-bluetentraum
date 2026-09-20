@@ -17,7 +17,7 @@
 			title: 'Atelier & Garn',
 			description: 'Schneiderei, Maßanfertigungen und Handwerk mit Liebe zum Detail.',
 			image:
-				'https://images.unsplash.com/photo-1779378106780-3016bc3c7915?auto=format&fit=crop&w=1200&q=80',
+				'https://images.unsplash.com/photo-1660536429868-8c7ecc8478a8?auto=format&fit=crop&w=1200&q=80',
 			href: '/atelier-garn'
 		},
 		{
@@ -184,16 +184,13 @@
 	let glowEl: HTMLDivElement;
 	let logoWrapEl: HTMLDivElement;
 	let logoEl: HTMLImageElement;
-	let aboutEl: HTMLDivElement;
+	let aboutSectionEl: HTMLElement;
 	let aboutImageWrapEl: HTMLDivElement;
 	let aboutImageEl: HTMLImageElement;
 	let aboutTextEl: HTMLDivElement;
-	let heroThreadPathEl: SVGPathElement;
 	let aboutFramePathEl: SVGPathElement;
-	let heroNeedleEl: SVGGElement;
 	let frameNeedleEl: SVGGElement;
 	let ctaNeedleEl: SVGGElement;
-	let curtainEl: HTMLDivElement;
 	let scrollHintEl: HTMLDivElement;
 	let scrollLineEl: HTMLSpanElement;
 	let bridgeEl: HTMLElement;
@@ -264,22 +261,12 @@
 					});
 				};
 
-				gsap.set(curtainEl, { yPercent: 100 });
-				gsap.set(aboutImageWrapEl, { opacity: 0, scale: 0.95, y: 28 });
-				gsap.set(aboutTextEl, { opacity: 0, y: 20 });
-
-				const heroThreadLen = heroThreadPathEl.getTotalLength();
-				gsap.set(heroThreadPathEl, {
-					strokeDasharray: heroThreadLen,
-					strokeDashoffset: heroThreadLen,
-					opacity: 0
-				});
-				const aboutFrameLen = aboutFramePathEl.getTotalLength();
-				gsap.set(aboutFramePathEl, { strokeDasharray: aboutFrameLen, strokeDashoffset: aboutFrameLen });
-
 				if (reduceMotion) {
 					gsap.set([logoWrapEl, scrollHintEl], { opacity: 1, y: 0, scale: 1 });
+					gsap.set([aboutImageWrapEl, aboutTextEl], { opacity: 1, scale: 1, y: 0 });
 				} else {
+					gsap.set(aboutImageWrapEl, { opacity: 0, scale: 0.95, y: 28 });
+					gsap.set(aboutTextEl, { opacity: 0, y: 20 });
 					gsap.from(logoWrapEl, {
 						opacity: 0,
 						scale: 0.92,
@@ -337,21 +324,17 @@
 						return;
 					}
 
-					// Pin-Distanz auf ein sanftes Mittelmaß eingependelt (vorher
-					// +=300%, davor +=40%): schnell genug, um nicht zäh zu wirken,
-					// aber lang genug für einen ruhigen, eleganten Ablauf.
-					//
-					// Bewusst ohne Spacer-/z-index-Tricks: heroEl ist ein ganz normal
-					// 100svh hohes, gepinntes Element. Sobald das Pin sich löst
-					// (Lenas Szene ist dann bereits weich ausgeblendet), kehrt
-					// heroEl in den natürlichen Dokumentfluss zurück und "Zwei
-					// Welten" scrollt regulär von unten nach oben nach – kein
-					// harter Sprung, kein künstliches Verdecken.
+					// Der Pin deckt jetzt nur noch die kurze, cineastische
+					// Logo-Flugphase ab. Lenas Bild und Zitat liegen in einer ganz
+					// normalen Dokumentfluss-Section direkt darunter (kein Pin, kein
+					// Vorhang mehr) – dadurch entsteht beim Weiterscrollen kein toter
+					// Leerraum: der Browser scrollt einfach linear weiter, statt in
+					// einer Pin-Lücke "hängen" zu bleiben.
 					const flyTl = gsap.timeline({
 						scrollTrigger: {
 							trigger: heroEl,
 							start: 'top top',
-							end: '+=160%',
+							end: '+=70%',
 							pin: true,
 							scrub: 1,
 							anticipatePin: 1
@@ -363,33 +346,7 @@
 					});
 
 					flyTl
-						// Phase 1 (0% – 45%): Logo + Glow fliegen cineastisch weg.
-						// Der Faden bleibt bis ~20% Scroll-Fortschritt unsichtbar und
-						// löst sich erst dann sichtbar vom Logo, um nach unten zu wachsen.
-						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.05, ease: 'none' }, 0)
-						.fromTo(
-							heroThreadPathEl,
-							{ opacity: 0 },
-							{ opacity: 1, ease: 'none', duration: 0.05 },
-							0.2
-						)
-						.to(heroThreadPathEl, {
-							strokeDashoffset: 0,
-							ease: 'none',
-							duration: 0.35,
-							onUpdate: function () {
-								moveNeedle(heroThreadPathEl, this.progress(), heroNeedleEl);
-							}
-						}, 0.2)
-						// Der kurze Hero-Faden bleibt sonst als fixer, horizontal
-						// zentrierter Strich stehen und würde Lenas Foto (das auf Mobile
-						// ebenfalls zentriert ist) durchschneiden. Er blendet aus, sobald
-						// der Rahmen-Faden um das Bild herum die Führung übernimmt.
-						.to(
-							heroThreadPathEl,
-							{ opacity: 0, ease: 'none', duration: 0.08 },
-							0.28
-						)
+						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.1, ease: 'none' }, 0)
 						.to(
 							logoEl,
 							{
@@ -397,9 +354,9 @@
 								yPercent: -130,
 								opacity: 0,
 								ease: 'power1.in',
-								duration: 0.42
+								duration: 0.9
 							},
-							0.03
+							0.05
 						)
 						.to(
 							glowEl,
@@ -407,67 +364,45 @@
 								scale: isMobile ? 2.4 : 3.2,
 								opacity: 0,
 								ease: 'none',
-								duration: 0.45
+								duration: 1
 							},
 							0
-						)
-						// Phase 2 (30% – 75%): "Über Lena"-Szene blendet synchron ein.
-						.fromTo(
-							aboutImageWrapEl,
-							{ opacity: 0, scale: 0.95, y: 28 },
-							{ opacity: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.45 },
-							0.3
-						)
-						.fromTo(
-							aboutTextEl,
-							{ opacity: 0, y: 20 },
-							{ opacity: 1, y: 0, ease: 'power2.out', duration: 0.42 },
-							0.33
-						)
-						.to(aboutFramePathEl, {
-							strokeDashoffset: 0,
-							ease: 'none',
-							duration: 0.45,
-							onUpdate: function () {
-								moveNeedle(aboutFramePathEl, this.progress(), frameNeedleEl);
-							}
-						}, 0.3)
-						// Lena bleibt bis 75% voll im Fokus, unangetastet lesbar im
-						// Bild (der lange Rahmen-Zeichenvorgang ist selbst die
-						// Lesepause und endet exakt hier).
-						// Phase 3 (75% – 100%): Erst jetzt fadet Lenas Bereich weich
-						// aus, während der Vorhang hochfährt – gestreckt über den
-						// gesamten restlichen Timeline-Bereich, damit exakt bei
-						// Progress 1 (= Ende der Pin-Distanz) alles abgeschlossen ist
-						// und "Zwei Welten" bündig, ohne Überschneidung, anschließt.
-						.to(
-							aboutEl,
-							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.25 },
-							0.75
-						)
-						.to(
-							curtainEl,
-							{ yPercent: 0, ease: 'power2.inOut', duration: 0.25 },
-							0.75
-						)
-						.to(
-							headerEl,
-							{
-								opacity: 1,
-								duration: 0.07,
-								ease: 'power1.out',
-								onStart: () => (headerVisible = true),
-								onReverseComplete: () => (headerVisible = false)
-							},
-							0.93
 						);
 
+					// Header erscheint, sobald die Logo-Szene komplett durchgescrollt
+					// ist – ein ganz normaler ScrollTrigger, unabhängig vom Pin.
+					ScrollTrigger.create({
+						trigger: heroEl,
+						start: 'bottom top',
+						onEnter: () => (headerVisible = true),
+						onLeaveBack: () => (headerVisible = false)
+					});
+
+					// Lenas Abschnitt blendet sanft ein, sobald er von unten in den
+					// Viewport rückt. Der Faden mit der Nadel (aboutFramePathEl /
+					// frameNeedleEl) startet ganz bewusst erst hier – über wireDraw
+					// weiter unten, nicht im Hero – und bleibt bis dahin in
+					// absoluter Ruhe (opacity 0).
+					const aboutTl = gsap.timeline({
+						scrollTrigger: {
+							trigger: aboutSectionEl,
+							start: 'top 75%'
+						}
+					});
+					aboutTl
+						.to(
+							aboutImageWrapEl,
+							{ opacity: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.9 },
+							0
+						)
+						.to(aboutTextEl, { opacity: 1, y: 0, ease: 'power2.out', duration: 0.8 }, 0.1);
+
 					if (!isMobile) {
-						flyTl.fromTo(
+						aboutTl.fromTo(
 							aboutImageEl,
 							{ filter: 'blur(14px)' },
-							{ filter: 'blur(0px)', ease: 'power2.out', duration: 0.35 },
-							0.25
+							{ filter: 'blur(0px)', ease: 'power2.out', duration: 0.8 },
+							0
 						);
 					}
 
@@ -589,6 +524,11 @@
 						wireDraw(pathEl, revealTargets[i], undefined, undefined, dotEl, needleGroupEl);
 					});
 
+					// Der Rahmen-Faden um Lenas Bild ist die erste Erscheinung des
+					// Fadens überhaupt – er zeichnet sich, sobald der Abschnitt von
+					// unten in den Viewport rückt.
+					wireDraw(aboutFramePathEl, aboutSectionEl, 'top bottom', 'top 20%', null, frameNeedleEl);
+
 					// Verbindende Wellenlinien zwischen den Stationen, damit der Faden
 					// permanent im Viewport präsent bleibt.
 					wireDraw(
@@ -695,50 +635,6 @@
 			class="pointer-events-none absolute left-1/2 top-1/2 h-[60vmax] w-[60vmax] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/40 opacity-50 blur-3xl"
 		></div>
 
-		<svg
-			viewBox="0 0 40 100"
-			aria-hidden="true"
-			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(200, 162, 122, 0.65));"
-			class="pointer-events-none absolute left-1/2 top-[30%] z-20 h-[24vh] w-16 -translate-x-1/2 text-thread"
-		>
-			<path
-				bind:this={heroThreadPathEl}
-				d="M20,0 C10,20 30,40 20,60 C12,74 26,88 20,100"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="4"
-				vector-effect="non-scaling-stroke"
-				stroke-linecap="round"
-			/>
-			<defs>
-				<linearGradient id="hero-needle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-					<stop offset="0%" stop-color="#E2E8F0" />
-					<stop offset="35%" stop-color="#FFFFFF" />
-					<stop offset="70%" stop-color="#94A3B8" />
-					<stop offset="100%" stop-color="#475569" />
-				</linearGradient>
-			</defs>
-			<g
-				bind:this={heroNeedleEl}
-				opacity="0"
-				style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 6px rgba(212, 175, 55, 0.85));"
-			>
-				<g transform="scale(0.6)">
-					<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#hero-needle-grad)" />
-					<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#hero-needle-grad)" stroke-width="1.8" />
-					<circle cx="-9" cy="1.6" r="1.7" fill="#F7E7C4" opacity="0.85">
-						<animate attributeName="opacity" values="0.85;0.25;0.85" dur="0.9s" repeatCount="indefinite" />
-					</circle>
-					<circle cx="-21" cy="-1.4" r="1.2" fill="#F7E7C4" opacity="0.55">
-						<animate attributeName="opacity" values="0.55;0.15;0.55" dur="1.3s" repeatCount="indefinite" />
-					</circle>
-					<circle cx="-33" cy="1" r="0.8" fill="#F7E7C4" opacity="0.3">
-						<animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
-					</circle>
-				</g>
-			</g>
-		</svg>
-
 		<div bind:this={logoWrapEl}>
 			<img
 				bind:this={logoEl}
@@ -760,94 +656,86 @@
 			</span>
 		</div>
 
+	</section>
+
+	<section
+		bind:this={aboutSectionEl}
+		class="relative flex flex-col items-center justify-center gap-8 overflow-hidden bg-mist px-6 py-20 sm:px-10 sm:py-28 md:flex-row md:gap-16 md:px-16 lg:gap-24"
+	>
 		<div
-			bind:this={aboutEl}
-			aria-hidden="true"
+			bind:this={aboutImageWrapEl}
 			style="will-change: transform, opacity;"
-			class="pointer-events-none absolute inset-0 z-[15] flex flex-col items-center justify-center gap-8 px-6 py-12 sm:px-10 md:flex-row md:gap-16 md:px-16 lg:gap-24"
+			class="relative w-[64vw] max-w-[300px] shrink-0 md:w-[32vw] md:max-w-[380px]"
 		>
 			<div
-				bind:this={aboutImageWrapEl}
-				style="will-change: transform, opacity;"
-				class="relative w-[64vw] max-w-[300px] shrink-0 md:w-[32vw] md:max-w-[380px]"
+				aria-hidden="true"
+				class="absolute -inset-6 -z-10 rounded-[2.5rem] bg-accent/25 blur-3xl"
+			></div>
+			<img
+				bind:this={aboutImageEl}
+				src="/lena.jpg"
+				alt="Portrait von Lena"
+				style="object-position: top center; will-change: filter;"
+				class="aspect-[4/5] w-full rounded-[3rem_1.25rem_3rem_1.25rem] object-cover shadow-[0_35px_70px_-25px_rgba(180,130,95,0.45)]"
+			/>
+
+			<svg
+				viewBox="0 0 100 120"
+				preserveAspectRatio="none"
+				aria-hidden="true"
+				style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(139, 165, 181, 0.6));"
+				class="pointer-events-none absolute -inset-5 z-30 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)] text-thread"
 			>
-				<div
-					aria-hidden="true"
-					class="absolute -inset-6 -z-10 rounded-[2.5rem] bg-accent/25 blur-3xl"
-				></div>
-				<img
-					bind:this={aboutImageEl}
-					src="/lena.jpg"
-					alt="Portrait von Lena"
-					style="object-position: top center; will-change: filter;"
-					class="aspect-[4/5] w-full rounded-[3rem_1.25rem_3rem_1.25rem] object-cover shadow-[0_35px_70px_-25px_rgba(180,130,95,0.45)]"
+				<path
+					bind:this={aboutFramePathEl}
+					d="M10,4 C-6,18 -6,58 2,94 C8,110 26,119 50,119 C74,119 92,110 98,94 C106,58 106,18 90,4"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="4"
+					vector-effect="non-scaling-stroke"
+					stroke-linecap="round"
 				/>
-
-				<svg
-					viewBox="0 0 100 120"
-					preserveAspectRatio="none"
-					aria-hidden="true"
-					style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(200, 162, 122, 0.65));"
-					class="pointer-events-none absolute -inset-5 z-30 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)] text-thread"
+				<defs>
+					<linearGradient id="frame-needle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+						<stop offset="0%" stop-color="#E2E8F0" />
+						<stop offset="35%" stop-color="#FFFFFF" />
+						<stop offset="70%" stop-color="#94A3B8" />
+						<stop offset="100%" stop-color="#475569" />
+					</linearGradient>
+				</defs>
+				<g
+					bind:this={frameNeedleEl}
+					opacity="0"
+					style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 6px rgba(212, 175, 55, 0.85));"
 				>
-					<path
-						bind:this={aboutFramePathEl}
-						d="M10,4 C-6,18 -6,58 2,94 C8,110 26,119 50,119 C74,119 92,110 98,94 C106,58 106,18 90,4"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="4"
-						vector-effect="non-scaling-stroke"
-						stroke-linecap="round"
-					/>
-					<defs>
-						<linearGradient id="frame-needle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-							<stop offset="0%" stop-color="#E2E8F0" />
-							<stop offset="35%" stop-color="#FFFFFF" />
-							<stop offset="70%" stop-color="#94A3B8" />
-							<stop offset="100%" stop-color="#475569" />
-						</linearGradient>
-					</defs>
-					<g
-						bind:this={frameNeedleEl}
-						opacity="0"
-						style="filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 6px rgba(212, 175, 55, 0.85));"
-					>
-						<g transform="scale(0.25)">
-							<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#frame-needle-grad)" />
-							<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#frame-needle-grad)" stroke-width="1.8" />
-							<circle cx="-9" cy="1.6" r="1.7" fill="#F7E7C4" opacity="0.85">
-								<animate attributeName="opacity" values="0.85;0.25;0.85" dur="0.9s" repeatCount="indefinite" />
-							</circle>
-							<circle cx="-21" cy="-1.4" r="1.2" fill="#F7E7C4" opacity="0.55">
-								<animate attributeName="opacity" values="0.55;0.15;0.55" dur="1.3s" repeatCount="indefinite" />
-							</circle>
-							<circle cx="-33" cy="1" r="0.8" fill="#F7E7C4" opacity="0.3">
-								<animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
-							</circle>
-						</g>
+					<g transform="scale(0.25)">
+						<path d="M8,0 L17,-1.6 L44,-0.8 L52,0 L44,0.8 L17,1.6 Z" fill="url(#frame-needle-grad)" />
+						<ellipse cx="6" cy="0" rx="5" ry="2.6" fill="none" stroke="url(#frame-needle-grad)" stroke-width="1.8" />
+						<circle cx="-9" cy="1.6" r="1.7" fill="#F7E7C4" opacity="0.85">
+							<animate attributeName="opacity" values="0.85;0.25;0.85" dur="0.9s" repeatCount="indefinite" />
+						</circle>
+						<circle cx="-21" cy="-1.4" r="1.2" fill="#F7E7C4" opacity="0.55">
+							<animate attributeName="opacity" values="0.55;0.15;0.55" dur="1.3s" repeatCount="indefinite" />
+						</circle>
+						<circle cx="-33" cy="1" r="0.8" fill="#F7E7C4" opacity="0.3">
+							<animate attributeName="opacity" values="0.3;0.05;0.3" dur="1.6s" repeatCount="indefinite" />
+						</circle>
 					</g>
-				</svg>
-			</div>
-
-			<div
-				bind:this={aboutTextEl}
-				style="will-change: transform, opacity;"
-				class="max-w-md text-center md:text-left"
-			>
-				<h2 class="font-serif text-3xl text-ink sm:text-4xl">Handwerk mit Seele</h2>
-				<p class="mt-4 text-base leading-relaxed text-ink/75 sm:text-lg">
-					„Wo feine Garne und lebendige Blüten zu einer gemeinsamen Geschichte verschmelzen.“
-				</p>
-				<span class="mt-6 inline-block font-serif text-2xl italic text-accent">— Lena</span>
-			</div>
+				</g>
+			</svg>
 		</div>
 
 		<div
-			bind:this={curtainEl}
-			aria-hidden="true"
-			style="will-change: transform;"
-			class="pointer-events-none absolute inset-0 z-40 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
-		></div>
+			bind:this={aboutTextEl}
+			style="will-change: transform, opacity;"
+			class="max-w-md text-center md:text-left"
+		>
+			<h2 class="font-serif text-3xl text-ink sm:text-4xl">Handwerk mit Seele</h2>
+			<p class="mt-4 text-base leading-relaxed text-ink/75 sm:text-lg">
+				„Wo feine Garne und lebendige Blüten zu einer gemeinsamen Geschichte verschmelzen.“
+			</p>
+			<span class="mt-6 inline-block font-serif text-2xl italic text-accent">— Lena</span>
+		</div>
 	</section>
 
 	<section
@@ -1297,7 +1185,7 @@
 		<svg
 			viewBox="0 0 120 80"
 			aria-hidden="true"
-			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(200, 162, 122, 0.65));"
+			style="filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(139, 165, 181, 0.6));"
 			class="pointer-events-none relative z-10 mx-auto mb-2 block h-20 w-32 text-champagne"
 		>
 			<path
