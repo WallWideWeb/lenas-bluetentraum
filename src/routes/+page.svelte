@@ -17,7 +17,7 @@
 			title: 'Atelier & Garn',
 			description: 'Schneiderei, Maßanfertigungen und Handwerk mit Liebe zum Detail.',
 			image:
-				'https://images.unsplash.com/photo-1524404794194-16bae22718c0?auto=format&fit=crop&w=1200&q=80',
+				'https://images.unsplash.com/photo-1600287792237-3f66db635a73?auto=format&fit=crop&w=1200&q=80',
 			href: '/atelier-garn'
 		},
 		{
@@ -311,29 +311,12 @@
 					// +=300%, davor +=40%): schnell genug, um nicht zäh zu wirken,
 					// aber lang genug für einen ruhigen, eleganten Ablauf.
 					//
-					// Gegen toten Scroll-Raum: GSAP reserviert für ein gepinntes
-					// Element standardmäßig einen Spacer in Höhe von (Elementhöhe +
-					// Pin-Distanz). Wäre heroEl selbst 100svh hoch, müsste man nach
-					// dem Lösen des Pins zusätzlich noch eine volle Bildschirmhöhe
-					// "leer" weiterscrollen, bevor "Zwei Welten" erscheint. Deshalb
-					// ist heroEl selbst nur ein winziges (h-px) Trigger-Element; die
-					// eigentliche, 100svh hohe visuelle Szene lebt in einem absolut
-					// positionierten Innen-Wrapper direkt darunter. So bleibt der
-					// Spacer nur so groß wie die Pin-Distanz selbst, und "Zwei
-					// Welten" schließt exakt in dem Moment an, in dem sich das Pin
-					// löst – ohne toten Zwischenraum.
-					//
-					// Gegen die Überschneidung: Solange "Zwei Welten" in den letzten
-					// Scroll-Pixeln des Pins schon in den Viewport hineinragt, würde
-					// es den noch aktiv gepinnten (aber z-index:auto) Hero trotz
-					// position:fixed optisch überdecken, weil spätere DOM-Position
-					// sonst gewinnt. Ein einfacher, permanenter z-20 auf heroEl (statt
-					// einer von GSAP bei jedem Pin-Update wieder überschriebenen
-					// Inline-Style) löst das robust: Während das Pin aktiv ist, liegt
-					// Hero (fixed) dank z-20 zuverlässig über "Zwei Welten"; sobald es
-					// sich löst, kehrt heroEl an seine winzige, längst hinter dem
-					// aktuellen Scroll liegende Ursprungsposition zurück und
-					// überschneidet nichts mehr – der z-20 bleibt dann folgenlos.
+					// Bewusst ohne Spacer-/z-index-Tricks: heroEl ist ein ganz normal
+					// 100svh hohes, gepinntes Element. Sobald das Pin sich löst
+					// (Lenas Szene ist dann bereits weich ausgeblendet), kehrt
+					// heroEl in den natürlichen Dokumentfluss zurück und "Zwei
+					// Welten" scrollt regulär von unten nach oben nach – kein
+					// harter Sprung, kein künstliches Verdecken.
 					const flyTl = gsap.timeline({
 						scrollTrigger: {
 							trigger: heroEl,
@@ -341,21 +324,7 @@
 							end: '+=160%',
 							pin: true,
 							scrub: 1,
-							anticipatePin: 1,
-							// Da Lenis den Scroll per Transform simuliert, pinnt GSAP
-							// heroEl ebenfalls per Transform statt position:fixed. Beim
-							// Lösen des Pins hält GSAP diesen Transform-Wert (zusammen
-							// mit Lenis' eigenem, fortlaufenden ScrollTrigger.update())
-							// hartnäckig aufrecht, statt ihn einmalig zurückzusetzen –
-							// heroEl (und die absolut positionierte Szene darin) bliebe
-							// sichtbar am letzten Scroll "kleben" und würde "Zwei
-							// Welten" weiter verdecken. onUpdate feuert bei jedem
-							// Scroll-Tick erneut und stellt den korrekten Zustand daher
-							// laufend selbst wieder her, statt sich einmalig
-							// überschreiben zu lassen.
-							onUpdate: (self) => {
-								if (!self.isActive) gsap.set(heroEl, { clearProps: 'transform' });
-							}
+							anticipatePin: 1
 						},
 						onStart: () => {
 							glowPulse?.kill();
@@ -668,9 +637,10 @@
 </header>
 
 <main class="bg-mist">
-	<section bind:this={heroEl} id="hero" class="relative z-20 h-px w-full">
-	<div
-		class="absolute inset-x-0 top-0 flex h-svh min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-mist"
+	<section
+		bind:this={heroEl}
+		id="hero"
+		class="relative flex h-svh min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-mist"
 	>
 		<div
 			bind:this={glowEl}
@@ -814,11 +784,10 @@
 			style="will-change: transform;"
 			class="pointer-events-none absolute inset-0 z-40 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
 		></div>
-	</div>
 	</section>
 
 	<section bind:this={splitEl} id="welten" class="relative bg-background">
-		<div bind:this={splitHeadingEl} class="mx-auto max-w-2xl px-6 pb-10 pt-6 text-center sm:pt-10">
+		<div bind:this={splitHeadingEl} class="mx-auto max-w-2xl px-6 pb-10 pt-28 text-center sm:pt-32">
 			<h2 class="font-serif text-2xl text-ink sm:text-3xl">Zwei Welten, eine Leidenschaft</h2>
 			<p class="mt-3 text-sm text-ink/70 sm:text-base">
 				Von zarten Garnen bis zu duftenden Blüten – entdecken Sie, wofür Lena brennt.
