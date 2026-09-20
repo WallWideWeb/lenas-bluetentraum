@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ThreadDress from '$lib/components/svg/ThreadDress.svelte';
 	import ThreadFlower from '$lib/components/svg/ThreadFlower.svelte';
+	import ThreadWave from '$lib/components/svg/ThreadWave.svelte';
 
 	type World = {
 		kicker: string;
@@ -121,6 +122,8 @@
 	let splitHeadingEl: HTMLDivElement;
 	let mobileCards: HTMLAnchorElement[] = $state([]);
 	let desktopPanels: HTMLAnchorElement[] = $state([]);
+	let synergyEl: HTMLElement;
+	let lookbookEl: HTMLElement;
 
 	$effect(() => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,7 +146,11 @@
 				gsap.set(aboutTextEl, { opacity: 0, y: 20 });
 
 				const heroThreadLen = heroThreadPathEl.getTotalLength();
-				gsap.set(heroThreadPathEl, { strokeDasharray: heroThreadLen, strokeDashoffset: heroThreadLen });
+				gsap.set(heroThreadPathEl, {
+					strokeDasharray: heroThreadLen,
+					strokeDashoffset: heroThreadLen,
+					opacity: 0
+				});
 				const aboutFrameLen = aboutFramePathEl.getTotalLength();
 				gsap.set(aboutFramePathEl, { strokeDasharray: aboutFrameLen, strokeDashoffset: aboutFrameLen });
 
@@ -223,10 +230,17 @@
 					});
 
 					flyTl
-						// Phase 1 (0% – 35%): Logo + Glow fliegen cineastisch weg,
-						// der Faden löst sich und wächst nach unten.
+						// Phase 1 (0% – 35%): Logo + Glow fliegen cineastisch weg.
+						// Der Faden bleibt bis ~17% Scroll-Fortschritt unsichtbar und
+						// löst sich erst dann sichtbar vom Logo, um nach unten zu wachsen.
 						.to(scrollHintEl, { opacity: 0, y: 8, duration: 0.04, ease: 'none' }, 0)
-						.to(heroThreadPathEl, { strokeDashoffset: 0, ease: 'none', duration: 0.35 }, 0)
+						.fromTo(
+							heroThreadPathEl,
+							{ opacity: 0 },
+							{ opacity: 1, ease: 'none', duration: 0.05 },
+							0.17
+						)
+						.to(heroThreadPathEl, { strokeDashoffset: 0, ease: 'none', duration: 0.28 }, 0.17)
 						.to(
 							logoEl,
 							{
@@ -325,44 +339,54 @@
 						});
 					});
 
-					// Faden zeichnet im jeweiligen Kartenbereich das Kleid bzw. die Blüte.
-					const prefix = isMobile ? 'mobile' : 'desktop';
-					worlds.forEach((world, i) => {
-						const pathEl = document.getElementById(
-							`${prefix}-thread-${world.kicker}`
-						) as SVGPathElement | null;
-						const triggerEl = revealTargets[i];
+					// Gemeinsamer Helfer: zeichnet einen Pfad nach, sobald sein Trigger
+					// von unten ins Bild kommt – so ist immer ein Stück Faden im
+					// Sichtfeld, ohne dass er je "abreißt".
+					const wireDraw = (
+						pathEl: SVGPathElement | null,
+						triggerEl: Element | null,
+						start = 'top bottom',
+						end = 'top 15%'
+					) => {
 						if (!pathEl || !triggerEl) return;
 						const len = pathEl.getTotalLength();
 						gsap.set(pathEl, { strokeDasharray: len, strokeDashoffset: len });
 						gsap.to(pathEl, {
 							strokeDashoffset: 0,
 							ease: 'none',
-							scrollTrigger: {
-								trigger: triggerEl,
-								start: 'top 85%',
-								end: 'top 30%',
-								scrub: 1.5
-							}
+							scrollTrigger: { trigger: triggerEl, start, end, scrub: 1.5 }
 						});
+					};
+
+					// Faden zeichnet im jeweiligen Kartenbereich das Kleid bzw. die Blüte.
+					const prefix = isMobile ? 'mobile' : 'desktop';
+					worlds.forEach((world, i) => {
+						const pathEl = document.getElementById(
+							`${prefix}-thread-${world.kicker}`
+						) as SVGPathElement | null;
+						wireDraw(pathEl, revealTargets[i]);
 					});
 
+					// Verbindende Wellenlinien zwischen den Stationen, damit der Faden
+					// permanent im Viewport präsent bleibt.
+					wireDraw(
+						document.getElementById('wave-synergy') as SVGPathElement | null,
+						synergyEl,
+						'top bottom',
+						'bottom 30%'
+					);
+					wireDraw(
+						document.getElementById('wave-lookbook') as SVGPathElement | null,
+						lookbookEl,
+						'top bottom',
+						'bottom 20%'
+					);
+
 					// Faden mündet in eine kleine Schleife über dem Anfrage-Bereich.
-					const ctaLoopPathEl = document.getElementById('cta-loop-path') as SVGPathElement | null;
-					if (ctaLoopPathEl) {
-						const loopLen = ctaLoopPathEl.getTotalLength();
-						gsap.set(ctaLoopPathEl, { strokeDasharray: loopLen, strokeDashoffset: loopLen });
-						gsap.to(ctaLoopPathEl, {
-							strokeDashoffset: 0,
-							ease: 'none',
-							scrollTrigger: {
-								trigger: ctaLoopPathEl,
-								start: 'top 80%',
-								end: 'top 40%',
-								scrub: 1.5
-							}
-						});
-					}
+					wireDraw(
+						document.getElementById('cta-loop-path') as SVGPathElement | null,
+						document.getElementById('cta-loop-path')
+					);
 				};
 
 				mm = gsap.matchMedia();
@@ -588,7 +612,12 @@
 		</div>
 	</section>
 
-	<section class="bg-background px-6 py-20 sm:px-10 sm:py-28">
+	<section bind:this={synergyEl} class="relative overflow-hidden bg-background px-6 py-20 sm:px-10 sm:py-28">
+		<ThreadWave
+			pathId="wave-synergy"
+			class="pointer-events-none absolute inset-y-0 left-2 w-10 text-accent/50 sm:left-6 sm:w-14 sm:text-accent/60"
+		/>
+
 		<div class="mx-auto max-w-5xl text-center">
 			<span class="text-xs uppercase tracking-[0.35em] text-accent">Warum beides zusammengehört</span>
 			<h2 class="mt-3 font-serif text-3xl text-ink sm:text-4xl">Das Synergie-Prinzip</h2>
@@ -609,7 +638,12 @@
 		</div>
 	</section>
 
-	<section class="bg-nude/10 py-20 sm:py-28">
+	<section bind:this={lookbookEl} class="relative overflow-hidden bg-nude/10 py-20 sm:py-28">
+		<ThreadWave
+			pathId="wave-lookbook"
+			class="pointer-events-none absolute inset-y-0 right-2 w-10 text-champagne/50 sm:right-6 sm:w-14 sm:text-champagne/60"
+		/>
+
 		<div class="mx-auto flex max-w-6xl items-end justify-between gap-6 px-6 sm:px-10">
 			<div>
 				<span class="text-xs uppercase tracking-[0.35em] text-accent">Lookbook</span>
