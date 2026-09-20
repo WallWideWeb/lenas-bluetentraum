@@ -307,18 +307,51 @@
 						return;
 					}
 
-					// Pin-Distanz nochmals deutlich gestrafft (vorher +=60%, davor
-					// +=75%): die Übergangsphase (Vorhang hoch, Lena raus,
-					// Split-Section andocken) ist jetzt spürbar kürzer, damit kein
-					// toter Scroll-Raum nach Lenas Bereich mehr entsteht.
+					// Pin-Distanz deutlich verlängert (vorher +=40%): die Animation
+					// läuft jetzt über eine viel längere Scroll-Strecke und wirkt
+					// dadurch spürbar sanfter und eleganter.
+					//
+					// Wichtig gegen toten Scroll-Raum: GSAP reserviert für ein
+					// gepinntes Element standardmäßig einen Spacer in Höhe von
+					// (Elementhöhe + Pin-Distanz). Wäre heroEl selbst 100svh hoch,
+					// müsste man nach dem Lösen des Pins zusätzlich noch eine volle
+					// Bildschirmhöhe "leer" weiterscrollen, bevor "Zwei Welten"
+					// erscheint. Deshalb ist heroEl selbst nur noch ein winziges
+					// (h-px) Trigger-Element; die eigentliche, 100svh hohe visuelle
+					// Szene lebt in einem absolut positionierten Innen-Wrapper
+					// (heroSceneEl) direkt darunter. So bleibt der Spacer nur so groß
+					// wie die Pin-Distanz selbst, und "Zwei Welten" schließt exakt in
+					// dem Moment an, in dem sich das Pin löst.
+					//
+					// Sobald "Zwei Welten" in den letzten Scroll-Pixeln des Pins in
+					// den Viewport hineinragt, würde es den noch aktiv gepinnten Hero
+					// optisch überdecken (spätere DOM-Position gewinnt sonst gegen ein
+					// fixiertes, aber z-index:auto Element). Der z-index wird daher
+					// nicht auf heroEl selbst gesetzt – GSAP überschreibt dessen Inline-
+					// Styles laufend bei jedem Pin-Update –, sondern auf den von GSAP
+					// erzeugten Pin-Spacer-Wrapper, den GSAP nicht fortlaufend
+					// neu beschreibt. Nur während das Pin aktiv ist, liegt er oben;
+					// danach fällt er sofort zurück, damit "Zwei Welten" ohne
+					// Verzögerung sichtbar wird.
 					const flyTl = gsap.timeline({
 						scrollTrigger: {
 							trigger: heroEl,
 							start: 'top top',
-							end: '+=40%',
+							end: '+=300%',
 							pin: true,
 							scrub: 1,
-							anticipatePin: 1
+							anticipatePin: 1,
+							// onUpdate statt onToggle: ScrollTrigger.refresh()-Läufe
+							// (z. B. durch spät ladende Bilder weiter unten auf der
+							// Seite) überschreiben den z-index sonst wieder mit "auto".
+							// onUpdate feuert bei jedem Scroll-Tick erneut und stellt
+							// den korrekten Wert so laufend selbst wieder her.
+							onUpdate: (self) => {
+								gsap.set(heroEl.parentElement, { zIndex: self.isActive ? 20 : 0 });
+							},
+							onRefresh: (self) => {
+								gsap.set(heroEl.parentElement, { zIndex: self.isActive ? 20 : 0 });
+							}
 						},
 						onStart: () => {
 							glowPulse?.kill();
@@ -391,34 +424,38 @@
 						.to(aboutFramePathEl, {
 							strokeDashoffset: 0,
 							ease: 'none',
-							duration: 0.36,
+							duration: 0.38,
 							onUpdate: function () {
 								moveNeedle(aboutFramePathEl, this.progress(), frameNeedleEl);
 							}
 						}, 0.3)
-						// Kurze Lesepause bis 66% (statt vormals 75%).
-						// Phase 3 (66% – 92%): Split-Section dockt an, Lena-Szene gleitet
-						// weich raus – kompakt, damit unmittelbar nach Lena weiterlesbar ist.
+						// Lena bleibt bis 68% ausführlich lesbar im Bild (der lange
+						// Rahmen-Zeichenvorgang ist selbst die Lesepause).
+						// Phase 3 (68% – 100%): Split-Section dockt an, Lena-Szene
+						// gleitet raus und der Vorhang fährt hoch – bewusst über den
+						// vollen restlichen Timeline-Bereich gestreckt, damit exakt bei
+						// Progress 1 (= Ende der Pin-Distanz) alles fertig ist und
+						// nichts einfriert, bevor "Zwei Welten" anschließt.
 						.to(
 							aboutEl,
-							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.22 },
-							0.66
+							{ opacity: 0, y: -50, ease: 'power1.in', duration: 0.3 },
+							0.68
 						)
 						.to(
 							curtainEl,
-							{ yPercent: 0, ease: 'power2.inOut', duration: 0.22 },
-							0.66
+							{ yPercent: 0, ease: 'power2.inOut', duration: 0.3 },
+							0.68
 						)
 						.to(
 							headerEl,
 							{
 								opacity: 1,
-								duration: 0.1,
+								duration: 0.08,
 								ease: 'power1.out',
 								onStart: () => (headerVisible = true),
 								onReverseComplete: () => (headerVisible = false)
 							},
-							0.82
+							0.9
 						);
 
 					if (!isMobile) {
@@ -621,15 +658,14 @@
 	aria-hidden={!headerVisible}
 	class="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 border-b border-ink/10 bg-background/70 px-6 py-3 opacity-0 backdrop-blur-md"
 >
-	<img src="/logo.jpg" alt="" class="h-8 w-auto" />
+	<img src="/logo.jpg" alt="" class="h-8 w-auto mix-blend-multiply" />
 	<span class="font-serif text-sm tracking-wide text-ink sm:text-base">Lena's Garn &amp; Blütentraum</span>
 </header>
 
-<main class="bg-accent">
-	<section
-		bind:this={heroEl}
-		id="hero"
-		class="relative flex h-svh min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-accent"
+<main class="bg-mist">
+	<section bind:this={heroEl} id="hero" class="relative h-px w-full">
+	<div
+		class="absolute inset-x-0 top-0 flex h-svh min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-mist"
 	>
 		<div
 			bind:this={glowEl}
@@ -773,6 +809,7 @@
 			style="will-change: transform;"
 			class="pointer-events-none absolute inset-0 z-40 rounded-t-[3rem] bg-linear-to-b from-accent/20 via-nude/30 to-background shadow-[0_-20px_60px_-15px_rgba(28,29,31,0.25)]"
 		></div>
+	</div>
 	</section>
 
 	<section bind:this={splitEl} id="welten" class="relative bg-background">
